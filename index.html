@@ -25,7 +25,6 @@
         };
         logDebug("V5 Pure ES5 Error handler active.");
     </script>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -61,7 +60,6 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans leading-tight">
-
     <!-- Login Gatekeeper Overlay -->
     <div id="login-overlay" class="fixed inset-0 flex items-center justify-center p-4">
         <div class="login-card w-full max-w-md p-8 text-center animate-in fade-in zoom-in duration-500">
@@ -87,11 +85,8 @@
             </div>
         </div>
     </div>
-
     <!-- Main App Container (Hidden until Auth) -->
     <div id="main-app-container" class="hidden">
-
-
     <!-- DEBUG BANNER -->
     <div id="debug-banner" class="bg-red-600 text-white p-3 text-sm font-bold z-[100] relative w-full shadow-lg h-32 overflow-y-auto hidden">
         <div class="flex justify-between items-center">
@@ -100,7 +95,6 @@
         </div>
         <p class="font-normal text-xs mt-1" id="debug-log">System initializing...</p>
     </div>
-
     <nav class="bg-white border-b px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-50">
         <div>
             <h1 class="text-xl font-bold text-gray-800">Analytics Dashboard</h1>
@@ -130,7 +124,6 @@
         <button id="tab2-btn" class="py-3 text-sm font-bold text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-colors">Order Item Summary</button>
         <button id="tab3-btn" class="py-3 text-sm font-bold text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-colors">Daily Breakup</button>
     </div>
-
     <!-- Supabase Config Modal -->
     <div id="dbModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -170,7 +163,6 @@
                             <option value="">-- Choose Item Table --</option>
                         </select>
                     </div>
-
                     <!-- Manual Entry Container -->
                     <div id="manualTableGroup" class="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-inner">
                         <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">Live Table Configuration</p>
@@ -186,7 +178,6 @@
                                 </button>
                             </div>
                         </div>
-
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 flex items-center gap-1.5">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Order Item Summary (Tab 2)
@@ -199,7 +190,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="flex justify-between items-center px-1">
                         <p class="text-[10px] text-gray-400">Discovery status: <span id="tableCount">Restricted</span></p>
                     </div>
@@ -211,7 +201,6 @@
             </div>
         </div>
     </div>
-
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="fixed inset-0 bg-white/90 z-[70] hidden flex flex-col items-center justify-center">
         <div class="loading-spinner mb-4"></div>
@@ -220,7 +209,6 @@
             <span class="text-sm font-semibold text-blue-600" id="loading-count">Rows Pulled: 0</span>
         </div>
     </div>
-
     <main id="main-content" class="p-6 hidden">
         <div id="tab1-content">
             <!-- AI Intelligence Bar -->
@@ -246,7 +234,6 @@
                 </button>
             </div>
         </div>
-
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
             <div class="card md:col-span-5 lg:col-span-4">
                 <div class="flex justify-between items-center mb-1">
@@ -288,9 +275,7 @@
                 <button id="btn-reset-filters" class="bg-blue-600 text-white px-2 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 w-full">Reset</button>
             </div>
         </div>
-
         <div id="active-filters" class="flex flex-wrap gap-2 mb-4 min-h-[32px]"></div>
-
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div class="card text-center border-l-4 border-blue-500 flex flex-col justify-center relative p-6 min-h-[100px]">
                 <p class="stat-label">Total Revenue</p>
@@ -313,7 +298,6 @@
                 <div id="kpi-persons-comp" class="mt-2 text-xs font-semibold"></div>
             </div>
         </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <div class="card">
                 <h3 class="font-bold text-gray-700 mb-4">1. Outlet Performance</h3>
@@ -324,7 +308,6 @@
                 <div class="h-72 chart-container"><canvas id="aovChart1"></canvas></div>
             </div>
         </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-8">
             <div class="card col-span-12 lg:col-span-4">
                 <h3 class="font-bold text-gray-700 mb-4">3. Slot Velocity</h3>
@@ -377,7 +360,6 @@
                     </button>
                 </div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-10 gap-x-3 gap-y-4 mb-6">
                 <div class="card md:col-span-4 lg:col-span-3">
                     <div class="flex justify-between items-center mb-1">
@@ -446,7 +428,6 @@
                     <button id="btn-reset-filters2" class="bg-emerald-600 text-white px-2 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 w-full">Reset</button>
                 </div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <div class="card text-center border-l-4 border-emerald-500 flex flex-col justify-center relative">
                     <p class="stat-label">Total SKUs Sold</p>
@@ -481,7 +462,6 @@
                     <div class="h-72 chart-container"><canvas id="bottomItemChart"></canvas></div>
                 </div>
             </div>
-
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="card">
                     <h3 class="font-bold text-gray-700 mb-4">5. Slot Category Behavior</h3>
@@ -504,7 +484,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Section 1: Orders -->
             <div class="mb-10">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">1. Order Breakup</h2>
@@ -541,7 +520,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Section 2: Net Sales -->
             <div class="mb-10">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">2. Net Sales Breakup</h2>
@@ -578,7 +556,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Section 3: Discounts -->
             <div class="mb-10">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">3. Discounts Breakup</h2>
@@ -641,7 +618,6 @@
                             </table>
                         </div>
                     </div>
-
                     <!-- Table 2: Last Week -->
                     <div class="card">
                         <h3 class="font-bold text-gray-700 mb-3 text-xs uppercase tracking-wider flex justify-between">
@@ -661,7 +637,6 @@
                             </table>
                         </div>
                     </div>
-
                     <!-- Table 3: Growth -->
                     <div class="card border-l-4 border-indigo-500">
                         <h3 class="font-bold text-gray-700 mb-3 text-xs uppercase tracking-wider flex justify-between">
@@ -682,7 +657,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="card">
                         <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Historical Comparison (Current Day)</h3>
@@ -697,7 +671,6 @@
         </div> <!-- end tab3 -->
         
     </main>
-
     <div id="empty-state" class="flex flex-col items-center justify-center h-96 text-gray-400">
         <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center max-w-sm text-center">
             <div class="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6">
@@ -708,7 +681,6 @@
             <button id="empty-setup-db" class="mt-6 bg-blue-600 text-white px-6 py-2 rounded-full font-bold hover:bg-blue-700 transition-colors">Setup Database</button>
         </div>
     </div>
-
     <!-- AI Overlay / Modal -->
     <div id="aiModal" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
@@ -724,18 +696,15 @@
             </div>
         </div>
     </div>
-
     <!-- SCRIPT BLOCK 2: PURE ES5 MAIN LOGIC -->
     <script>
         if(typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
             Chart.register(ChartDataLabels);
         }
         logDebug("Main script (ES5) evaluating");
-
         var SB_URL = "https://wroyimrtmtqwtphprvay.supabase.co";
         var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indyb3lpbXJ0bXRxd3RwaHBydmF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDg3ODUsImV4cCI6MjA4NjM4NDc4NX0.xOEsHGG06EiKweQV9ssWErs5nmFiHX9k1eaCNXoCbaA";
         var apiKey = "AIzaSyAn7Y835oeGjZemQl8ugiljnat9M_q11Yo";
-
         var rawData = [];
         var filteredData = []; var filteredDataComp = [];
         var activeBaseFilter = []; var activeBaseFilterComp = [];
@@ -747,24 +716,20 @@
         var activeBaseItemFilter = []; var activeBaseItemFilterComp = [];
         var itemAggregates = {}; var itemCompareAggregates = {};
         var compareMode2 = false;
-
         var charts = {};
         var supabaseClient = null;
         var selectionState = { restaurant_name: [], group_name: [], processedSlot: [], aovBucket: [] };
         var selectionItemState = { category_name: [], item_name: [], processedSlot: [], restaurant_name: [], channel: [], aovBucket: [] };
         var activeTab = 1;
-
         var CONFIG = {
             colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#475569'],
             dimColor: '#f1f5f9',
             slots: { endB: 12, endL: 15.5, endT: 18.5 },
             pageSize: 1000 
         };
-
         var indianFormatter = new Intl.NumberFormat('en-IN', {
             style: 'currency', currency: 'INR', maximumFractionDigits: 0
         });
-
         function callGemini(prompt, systemPrompt) {
             if (!apiKey) {
                 return Promise.reject(new Error("Gemini API Key is missing. Please add it in DB Settings."));
@@ -782,7 +747,6 @@
                 return _tryGeminiModel(bodyObj, "gemini-2.0-flash");
             });
         }
-
         function _tryGeminiModel(bodyObj, modelName) {
             var url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
             return fetch(url, {
@@ -811,7 +775,6 @@
                 }
             });
         }
-
         function generateInsights() {
             logDebug("Generate Insights clicked");
             var btn = document.getElementById('ai-insight-btn');
@@ -819,10 +782,8 @@
             btn.disabled = true;
             btn.innerHTML = "Analyzing... ✨";
             textEl.classList.add('ai-pulse');
-
             var summary = getSummaryForAI();
             var prompt = "Analyze this summary of restaurant data: " + JSON.stringify(summary) + ". \n            Identify the single most interesting trend or anomaly. Keep it to 2 sentences.";
-
             callGemini(prompt).then(function(insight) {
                 textEl.textContent = insight;
                 textEl.classList.remove('italic');
@@ -837,33 +798,28 @@
                 textEl.classList.remove('ai-pulse');
             });
         }
-
         function askRecommendations() {
             logDebug("Growth Strategies clicked");
             showAiModal("Fetching Growth Strategies...", "Growth Strategies ✨");
             var summary = getSummaryForAI();
             var prompt = "Based on these restaurant metrics: " + JSON.stringify(summary) + ", \n            suggest 3 specific growth strategies to increase revenue and order volume. \n            Focus on slots with lower performance and high-performing brand categories. Use bullet points.";
-
             callGemini(prompt).then(function(recommendations) {
                 updateAiModal(recommendations);
             }).catch(function(e) {
                 updateAiModal("Error generating recommendations: " + e.message);
             });
         }
-
         function generatePersona() {
             logDebug("Diner Persona clicked");
             showAiModal("Identifying Typical Diner...", "Diner Persona ✨");
             var summary = getSummaryForAI();
             var prompt = "Analyze this data: " + JSON.stringify(summary) + ". \n            Create a Diner Persona for the most common type of customer. \n            Include their likely motivation (e.g., family dinner, quick solo lunch), \n            estimated spending habit, and preferred brand categories. Be creative but data-driven.";
-
             callGemini(prompt).then(function(persona) {
                 updateAiModal(persona);
             }).catch(function(e) {
                 updateAiModal("Error generating persona: " + e.message);
             });
         }
-
         function getSummaryForAI() {
             var outletData = Object.keys(globalAggregates.restaurant_name).map(function(k) {
                 return {name: k, revenue: globalAggregates.restaurant_name[k].total, count: globalAggregates.restaurant_name[k].count};
@@ -883,7 +839,6 @@
                 busiestSlots: slotData.sort(function(a,b) { return b.count - a.count; })
             };
         }
-
         function getSummaryForAITab2() {
             var topCats = Object.keys(itemAggregates.category_name).map(function(k) { return {name: k, qty: itemAggregates.category_name[k].qty}; }).sort(function(a,b){return b.qty-a.qty}).slice(0,5);
             var topItems = Object.keys(itemAggregates.item_name).map(function(k) { return {name: k, qty: itemAggregates.item_name[k].qty}; }).sort(function(a,b){return b.qty-a.qty}).slice(0,5);
@@ -894,7 +849,6 @@
                 aovBuckets: getAOVBuckets()
             };
         }
-
         function generateInsights2() {
             logDebug("Generate Insights 2 clicked");
             var btn = document.getElementById('ai-insight-btn2');
@@ -908,31 +862,25 @@
                 textEl.textContent = "Unable to connect: " + e.message; btn.disabled = false; btn.innerHTML = "Generate ✨"; textEl.classList.remove('ai-pulse');
             });
         }
-
         function askRecommendations2() {
             showAiModal("Optimizing Menu...", "Menu Optimization ✨");
             var prompt = "Based on this SKU item mix: " + JSON.stringify(getSummaryForAITab2()) + ", \nsuggest 3 specific menu engineering or bundling strategies to increase item flow and basket size. Use bullet points.";
             callGemini(prompt).then(function(res) { updateAiModal(res); }).catch(function(e) { updateAiModal("Error: " + e.message); });
         }
-
         function generatePersona2() {
             showAiModal("Identifying Product Affinities...", "Purchasing Persona ✨");
             var prompt = "Analyze this SKU item data: " + JSON.stringify(getSummaryForAITab2()) + ". \nCreate a consumer persona describing the type of buyer driving these specific item volumes and AOV buckets.";
             callGemini(prompt).then(function(res) { updateAiModal(res); }).catch(function(e) { updateAiModal("Error: " + e.message); });
         }
-
         function showAiModal(initialText, title) {
             document.getElementById('aiModalTitle').textContent = title;
             document.getElementById('aiModalContent').innerHTML = '<div class="flex flex-col items-center py-10"><div class="loading-spinner mb-4"></div><p class="text-gray-400">' + initialText + '</p></div>';
             document.getElementById('aiModal').classList.remove('hidden');
         }
-
         function updateAiModal(content) {
             document.getElementById('aiModalContent').innerHTML = content.replace(/\n/g, '<br>');
         }
-
         function closeAiModal() { document.getElementById('aiModal').classList.add('hidden'); }
-
         function toggleDbModal() { 
             logDebug("toggleDbModal executing");
             try {
@@ -945,12 +893,10 @@
                 logDebug("Error toggling modal: " + e.message);
             }
         }
-
         function discoverTables() {
             var url = document.getElementById('sbUrl').value;
             var key = document.getElementById('sbKey').value;
             if(!url || !key) return;
-
             logDebug("Discovering tables via OpenAPI spec...");
             document.getElementById('discoverLoader').classList.remove('hidden');
             document.getElementById('discoverText').textContent = "Scanning credentials...";
@@ -959,7 +905,6 @@
                 document.getElementById('discoverText').textContent = "Server configuration verified.";
                 document.getElementById('discoverLoader').classList.add('hidden');
             }, 5000);
-
             var discoveryUrl = url + '/rest/v1/?apikey=' + key;
             
             // Try first with full headers
@@ -997,7 +942,6 @@
                 }
                 
                 tables = tables.filter(function(t) { return t && t !== 'rpc' && t.indexOf('_') !== 0; }).sort();
-
                 if (tables.length > 0) {
                     var select1 = document.getElementById('sbTableSelect');
                     var select2 = document.getElementById('sbTableSelect2');
@@ -1027,7 +971,6 @@
                 logDebug("Discovery error (Quietly ignored): " + e.message);
             });
         }
-
         function toggleEdit(id) {
             var el = document.getElementById(id);
             if (el.readOnly) {
@@ -1041,7 +984,6 @@
                 el.classList.remove('bg-white', 'text-gray-900', 'border-blue-500', 'ring-2', 'ring-blue-100');
             }
         }
-
         function saveDbSettings() {
             try {
                 logDebug("Saving DB Settings");
@@ -1065,7 +1007,6 @@
                 logDebug("saveDbSettings error: " + e.message);
             }
         }
-
         function initSupabase(url, key) { 
             logDebug("Initializing supabase client");
             if (typeof supabase === 'undefined') {
@@ -1084,7 +1025,6 @@
                 return false;
             }
         }
-
         function _syncSupabaseLoop(tableName, from, allData, overlay, callback) {
             supabaseClient.from(tableName).select('*').range(from, from + 999)
             .then(function(res) {
@@ -1110,7 +1050,6 @@
                 overlay.classList.add('hidden');
             });
         }
-
         function _syncSupabaseDone(orderData, itemData, overlay) {
             logDebug("Sync completed. Orders: " + orderData.length + ", Items: " + itemData.length);
             initData(orderData, itemData);
@@ -1119,7 +1058,6 @@
             document.getElementById('tabBar').classList.remove('hidden');
             overlay.classList.add('hidden');
         }
-
         function syncSupabase() {
             logDebug("Starting Sync");
             var savedStr = localStorage.getItem('supabase_config');
@@ -1142,7 +1080,6 @@
                 }
             });
         }
-
         function switchTab(tabIndex) {
             activeTab = tabIndex;
             document.getElementById('tab1-btn').className = (tabIndex === 1) ? 'py-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-colors' : 'py-3 text-sm font-bold text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-colors';
@@ -1163,7 +1100,6 @@
                 document.getElementById('tab3-content').classList.remove('hidden');
             }
         }
-
         function parseCustomDate(str) { var d = new Date(str); return isNaN(d.getTime()) ? null : d; }
         function getSlot(h) { 
             if (h >= 7 && h < 12.5) return "Breakfast"; 
@@ -1171,7 +1107,6 @@
             if (h >= 16 && h < 19) return "Snacks"; 
             return "Dinner"; 
         }
-
         function normalizePayment(p, area) {
             p = (p || '').trim().toLowerCase();
             area = (area || '').trim().toLowerCase();
@@ -1190,7 +1125,6 @@
             if (p.indexOf('bank transfer') > -1 || p.indexOf('bank') > -1) return 'Bank';
             return 'Other';
         }
-
         function initData(orderData, itemData) {
             logDebug("initData processing " + orderData.length + " Orders, " + itemData.length + " Items.");
             try {
@@ -1243,7 +1177,6 @@
                 fillSelect('areaFilter', aTypes, "All Areas");
                 fillSelect('paymentFilter', pTypes, "All Payments");
                 fillSelect('statusFilter', sTypes, "All Statuses");
-
                 // Precompute aov buckets for speedy lookup
                 var invoiceAOVMap = {};
                 for(var k=0; k<rawData.length; k++) {
@@ -1255,7 +1188,6 @@
                     invoiceAOVMap[vr.invoice_no] = tb;
                     rawData[k].aovBucket = tb;
                 }
-
                 var iaTypes = []; var ipTypes = []; var isTypes = []; var irTypes = [];
                 for(var j=0; j<rawItemData.length; j++) {
                     rawItemData[j].aovBucket = invoiceAOVMap[rawItemData[j].invoice_no] || 'Unknown';
@@ -1273,27 +1205,23 @@
                 fillSelect('paymentFilter2', ipTypes, "All Payments");
                 fillSelect('statusFilter2', isTypes, "All Statuses");
                 fillSelect('restaurantFilter2', irTypes, "All Restaurants");
-
                 // Tab 3 Init: latest date
                 var maxDate = '';
                 for(var m=0; m<rawData.length; m++) {
                     if(!maxDate || rawData[m].dateOnly > maxDate) maxDate = rawData[m].dateOnly;
                 }
                 document.getElementById('dateBreakupFilter').value = maxDate;
-
                 updateDashboard();
                 logDebug("initData complete");
             } catch(e) {
                 logDebug("initData error: " + e.message);
             }
         }
-
         function fillSelect(id, items, label) { 
             var html = '<option value="all">' + label + '</option>';
             items.filter(Boolean).sort().forEach(function(i) { html += '<option value="' + i + '">' + i + '</option>'; });
             document.getElementById(id).innerHTML = html;
         }
-
         function updateDashboard() {
             try {
                 var dStart = document.getElementById('dateStart').value;
@@ -1337,7 +1265,6 @@
                                (!selectionState.aovBucket.length || selectionState.aovBucket.indexOf(r.aovBucket) > -1);
                     }), 'processedSlot') 
                 };
-
                 compareMode1 = document.getElementById('compareToggle').checked;
                 var dStartComp = document.getElementById('dateStartComp').value;
                 var dEndComp = document.getElementById('dateEndComp').value;
@@ -1385,7 +1312,6 @@
                 var rType2 = document.getElementById('restaurantFilter2').value;
                 var aovf = document.getElementById('aovBucketFilter2').value;
                 var slotf = document.getElementById('slotFilter2').value;
-
                 var baseItemFilter = rawItemData.filter(function(r) {
                     return ( (!dStart2 || r.dateOnly >= dStart2) && (!dEnd2 || r.dateOnly <= dEnd2) )
                            && (oType2 === 'all' || r.area === oType2) 
@@ -1405,7 +1331,6 @@
                     var aMatch = !selectionItemState.aovBucket.length || selectionItemState.aovBucket.indexOf(r.aovBucket) > -1;
                     return nMatch && cMatch && iMatch && sMatch && pMatch && aMatch;
                 });
-
                 activeBaseItemFilter = baseItemFilter;
                 
                 itemAggregates = {
@@ -1428,12 +1353,10 @@
                                (!selectionItemState.aovBucket.length || selectionItemState.aovBucket.indexOf(r.aovBucket) > -1);
                     }), 'item_name')
                 };
-
                 // --- Tab 2 Item Filter Logic ---
                 compareMode2 = document.getElementById('compareToggle2').checked;
                 var dStartComp2 = document.getElementById('dateStartComp2').value;
                 var dEndComp2 = document.getElementById('dateEndComp2').value;
-
                 if (compareMode2) {
                     var baseItemFilterComp = rawItemData.filter(function(r) {
                         return ( (!dStartComp2 || r.dateOnly >= dStartComp2) && (!dEndComp2 || r.dateOnly <= dEndComp2) )
@@ -1490,7 +1413,6 @@
                 setTimeout(initResizables, 100); 
             } catch(e) { logDebug("updateDashboard fatal: " + e.message); }
         }
-
         function initResizables() {
             var tables = document.querySelectorAll('table.resizable');
             for(var i=0; i<tables.length; i++) {
@@ -1506,7 +1428,6 @@
                 }
             }
         }
-
         function _createResizer(th, resizer) {
             var x = 0; var w = 0;
             var mouseMoveHandler = function(e) {
@@ -1528,7 +1449,6 @@
                 document.addEventListener('mouseup', mouseUpHandler);
             });
         }
-
         function aggregateItems(data, key) {
             var res = {};
             for(var i=0; i<data.length; i++) {
@@ -1538,7 +1458,6 @@
             }
             return res;
         }
-
         function aggregate(data, key) {
             var res = {};
             for(var i=0; i<data.length; i++) {
@@ -1549,7 +1468,6 @@
             }
             return res;
         }
-
         function generateDeltaHTML(valA, valB, formatType) {
             if (valB === 0) return '';
             var diff = valA - valB;
@@ -1560,13 +1478,11 @@
             if (formatType === 'currency') displayValB = indianFormatter.format(valB);
             else if (formatType === 'number') displayValB = valB.toLocaleString();
             else if (formatType === 'float') displayValB = valB.toFixed(1);
-
             return '<div class="text-right flex flex-col items-end leading-tight">' +
                    '<span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">' + displayValB + ' (Period B)</span>' +
                    '<div><span class="' + colorClass + '">' + icon + ' ' + Math.abs(pct) + '%</span> <span class="text-gray-400 font-normal">vs Period B</span></div>' +
                    '</div>';
         }
-
         function renderKPIs() {
             var rev = 0; var ps = 0; var pcount = 0;
             for(var i=0; i<filteredData.length; i++) {
@@ -1583,7 +1499,6 @@
             document.getElementById('kpi-orders').textContent = count.toLocaleString(); 
             document.getElementById('kpi-aov').textContent = indianFormatter.format(aov); 
             document.getElementById('kpi-persons').textContent = avgP.toFixed(1);
-
             if (compareMode1) {
                 var revB = 0; var psB = 0; var pcountB = 0;
                 for(var j=0; j<filteredDataComp.length; j++) {
@@ -1606,7 +1521,6 @@
                 document.getElementById('kpi-persons-comp').innerHTML = '';
             }
         }
-
         function getOrderAOVBuckets(sourceData) {
             var b = { '0-200':0, '200-400':0, '400-600':0, '600-800':0, '800-1000':0, '1000-1200':0, '>1200':0 };
             for(var i=0; i<sourceData.length; i++) {
@@ -1616,7 +1530,6 @@
             }
             return b;
         }
-
         function renderCharts() { 
             draw('outletChart', 'bar', 'restaurant_name'); 
             
@@ -1642,7 +1555,6 @@
                 var bgColors2 = bLabels.map(function(l) { return selectionState.aovBucket.length && selectionState.aovBucket.indexOf(l) === -1 ? '#ffedd5' : '#f97316'; });
                 datasetsAOV.push({ label: 'Period B Invoices', data: bData2, backgroundColor: bgColors2 });
             }
-
             if (charts['aovChart1']) charts['aovChart1'].destroy();
             charts['aovChart1'] = new Chart(document.getElementById('aovChart1'), {
                 type: 'bar', data: { labels: bLabels, datasets: datasetsAOV },
@@ -1655,7 +1567,6 @@
             
             draw('slotChart', 'line', 'processedSlot', ["Breakfast", "Lunch", "Snacks", "Dinner"]); 
         }
-
         function renderTab2KPIs() {
             var totalItems = 0;
             var uniqueInvoices = {};
@@ -1686,7 +1597,6 @@
                 document.getElementById('kpi-invoice-comp').innerHTML = '';
             }
         }
-
         function getAOVBuckets(sourceItemData) {
             var orderMap = {};
             for(var i=0; i<rawData.length; i++) {
@@ -1706,7 +1616,6 @@
             });
             return b;
         }
-
         function renderTab2Charts() {
             // Category Profile
             drawItemDoughnut('catItemChart', 'category_name');
@@ -1747,7 +1656,6 @@
                 var itemBg2 = itemBLabels.map(function(l) { return selectionItemState.aovBucket.length && selectionItemState.aovBucket.indexOf(l) === -1 ? '#ffedd5' : '#f97316'; });
                 datasetsAOVItem.push({ label: 'Period B Invoices', data: itemBData2, backgroundColor: itemBg2 });
             }
-
             if (charts['bucketChart']) charts['bucketChart'].destroy();
             charts['bucketChart'] = new Chart(document.getElementById('bucketChart'), {
                 type: 'bar', data: { labels: itemBLabels, datasets: datasetsAOVItem },
@@ -1765,7 +1673,6 @@
                 var sData2 = slots.map(function(s) { return filteredItemDataComp.filter(function(r) { return r.processedSlot === s; }).reduce(function(sum, r){ return sum + r.qty; }, 0); });
                 slotDatasets.push({ label: 'Period B Items Sold', data: sData2, borderColor: '#f97316', fill:true, tension:0.4 });
             }
-
             if (charts['slotCatChart']) charts['slotCatChart'].destroy();
             charts['slotCatChart'] = new Chart(document.getElementById('slotCatChart'), {
                 type: 'line', data: { labels: slots, datasets: slotDatasets },
@@ -1776,7 +1683,6 @@
                 }
             });
         }
-
         function mapChannelPivot(area) {
             if (!area) return 'Others';
             var a = area.toLowerCase();
@@ -1786,7 +1692,6 @@
             if (a.indexOf('zomato') > -1) return 'Zomato';
             return 'Others';
         }
-
         function renderTab3() {
             var targetDate = document.getElementById('dateBreakupFilter').value;
             if (!targetDate) return;
@@ -1826,7 +1731,6 @@
                 
                 var sortedRes = Object.keys(restaurantMap).sort();
                 var isCur = (metricName !== 'orders');
-
                 // Table 1 (Slots)
                 var h1 = '<tr><th class="p-2 text-left w-1/4">Location</th>' + slots.map(function(s){ return '<th class="p-2 text-right">'+s+'</th>'; }).join('') + '<th class="p-2 text-right">Total</th></tr>';
                 document.getElementById('breakupSlotHead' + suffix).innerHTML = h1;
@@ -1845,7 +1749,6 @@
                 document.getElementById('breakupSlotBody' + suffix).innerHTML = b1;
                 var f1 = '<tr><td class="p-1 font-bold">Grand Total</td>' + slots.map(function(s){ return '<td class="p-1 text-right font-bold">'+(isCur ? indianFormatter.format(sTots[s]) : sTots[s].toLocaleString())+'</td>'; }).join('') + '<td class="p-1 text-right font-bold">'+(isCur ? indianFormatter.format(gTot) : gTot.toLocaleString())+'</td></tr>';
                 document.getElementById('breakupSlotFoot' + suffix).innerHTML = f1;
-
                 // Table 2 (Channels)
                 var h2 = '<tr><th class="p-2 text-left w-1/4">Location</th>' + channels.map(function(c){ return '<th class="p-2 text-right">'+c+'</th>'; }).join('') + '<th class="p-2 text-right">Total</th></tr>';
                 document.getElementById('breakupAreaHead' + suffix).innerHTML = h2;
@@ -1864,7 +1767,6 @@
                 document.getElementById('breakupAreaBody' + suffix).innerHTML = b2;
                 var f2 = '<tr><td class="p-1 font-bold">Grand Total</td>' + channels.map(function(c){ return '<td class="p-1 text-right font-bold">'+(isCur ? indianFormatter.format(cTots[c]) : cTots[c].toLocaleString())+'</td>'; }).join('') + '<td class="p-1 text-right font-bold">'+(isCur ? indianFormatter.format(gTot2) : gTot2.toLocaleString())+'</td></tr>';
                 document.getElementById('breakupAreaFoot' + suffix).innerHTML = f2;
-
                 // Charts
                 var cId1 = 'breakupSlotChart' + suffix;
                 if(charts[cId1]) charts[cId1].destroy();
@@ -1872,7 +1774,6 @@
                     type: 'line', data: { labels: sortedRes, datasets: slots.map(function(s, idx){ return { label: s, data: sortedRes.map(function(r){ return restaurantMap[r].slots[s]; }), borderColor: CONFIG.colors[idx%8], tension: 0, fill: false, pointRadius: 3 }; }) },
                     options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }, scales: { y: { ticks: { font: { size: 9 } } }, x: { ticks: { font: { size: 9 } } } } }
                 });
-
                 var cId2 = 'breakupAreaChart' + suffix;
                 if(charts[cId2]) charts[cId2].destroy();
                 charts[cId2] = new Chart(document.getElementById(cId2), {
@@ -1880,14 +1781,12 @@
                     options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }, scales: { y: { ticks: { font: { size: 9 } } }, x: { ticks: { font: { size: 9 } } } } }
                 });
             }
-
             buildPivots('orders', ''); // Suffix empty for orders
             buildPivots('sales', 'Sales');
             buildPivots('discounts', 'Disc');
             
             renderWoWSection(targetDate);
         }
-
         function renderWoWSection(targetDate) {
             try {
                 var d = new Date(targetDate);
@@ -1902,7 +1801,6 @@
                 
                 document.getElementById('wowHeadCurrent').textContent = dayName + " " + targetDate;
                 document.getElementById('wowHeadLast').textContent = dayName + " " + targetDateLast;
-
                 var dataA = rawData.filter(function(r) { return r.dateOnly === targetDate; });
                 var dataB = rawData.filter(function(r) { return r.dateOnly === targetDateLast; });
                 
@@ -1916,24 +1814,20 @@
                     });
                     return map;
                 }
-
                 var aggA = aggByRes(dataA);
                 var aggB = aggByRes(dataB);
                 
                 var allRes = [];
                 Object.keys(aggA).concat(Object.keys(aggB)).forEach(function(k) { if(allRes.indexOf(k) === -1) allRes.push(k); });
                 allRes.sort();
-
                 var bodyA = ''; var bodyB = ''; var bodyG = '';
                 var tOA = 0; var tSA = 0; var tOB = 0; var tSB = 0;
-
                 allRes.forEach(function(res) {
                     var vA = aggA[res] || { orders: 0, sales: 0 };
                     var vB = aggB[res] || { orders: 0, sales: 0 };
                     
                     tOA += vA.orders; tSA += vA.sales;
                     tOB += vB.orders; tSB += vB.sales;
-
                     bodyA += '<tr><td class="p-2 font-medium">'+res+'</td><td class="p-2 text-right">'+vA.orders.toLocaleString()+'</td><td class="p-2 text-right">'+indianFormatter.format(vA.sales)+'</td></tr>';
                     bodyB += '<tr><td class="p-2 font-medium">'+res+'</td><td class="p-2 text-right">'+vB.orders.toLocaleString()+'</td><td class="p-2 text-right">'+indianFormatter.format(vB.sales)+'</td></tr>';
                     
@@ -1945,7 +1839,6 @@
                     
                     bodyG += '<tr><td class="p-2 font-medium">'+res+'</td><td class="p-2 text-right '+oColor+'">'+oG+'%</td><td class="p-2 text-right '+sColor+'">'+sG+'%</td></tr>';
                 });
-
                 // Grand Totals
                 var gOA = tOA ? ((tOA - tOB)/tOB * 100).toFixed(1) : (tOA ? '100.0' : '0.0');
                 var gSA = tSA ? ((tSA - tSB)/tSB * 100).toFixed(1) : (tSA ? '100.0' : '0.0');
@@ -1953,11 +1846,9 @@
                 bodyA += '<tr class="bg-gray-50 font-bold border-t"><td>Grand Total</td><td class="text-right">'+tOA.toLocaleString()+'</td><td class="text-right">'+indianFormatter.format(tSA)+'</td></tr>';
                 bodyB += '<tr class="bg-gray-50 font-bold border-t"><td>Grand Total</td><td class="text-right">'+tOB.toLocaleString()+'</td><td class="text-right">'+indianFormatter.format(tSB)+'</td></tr>';
                 bodyG += '<tr class="bg-gray-50 font-bold border-t"><td>Grand Total</td><td class="text-right '+(gOA>=0?'text-emerald-500':'text-rose-500')+'">'+gOA+'%</td><td class="text-right '+(gSA>=0?'text-emerald-500':'text-rose-500')+'">'+gSA+'%</td></tr>';
-
                 document.getElementById('wowBodyCurrent').innerHTML = bodyA;
                 document.getElementById('wowBodyLast').innerHTML = bodyB;
                 document.getElementById('wowBodyGrowth').innerHTML = bodyG;
-
                 // Charts
                 function drawMixedChart(id, labels, orders, sales) {
                     if(charts[id]) charts[id].destroy();
@@ -1979,10 +1870,8 @@
                         }
                     });
                 }
-
                 drawMixedChart('wowChartCurrent', allRes, allRes.map(function(k){ return aggA[k]?aggA[k].orders:0; }), allRes.map(function(k){ return aggA[k]?aggA[k].sales:0; }));
                 drawMixedChart('wowChartLast', allRes, allRes.map(function(k){ return aggB[k]?aggB[k].orders:0; }), allRes.map(function(k){ return aggB[k]?aggB[k].sales:0; }));
-
             } catch(e) { logDebug("renderWoWSection error: " + e.message); }
         }
     
@@ -1991,7 +1880,6 @@
             var sortedFull = rawLabels.map(function(l) { 
                 return { label: l, v1: itemAggregates[key][l].qty, v2: (compareMode2 && itemCompareAggregates[key] && itemCompareAggregates[key][l]) ? itemCompareAggregates[key][l].qty : 0 }; 
             }).sort(function(a,b) { return b.v1 - a.v1; });
-
             // Grouping into Top 10 + Others if more than 12 categories
             var labels = []; var data1 = []; var data2 = [];
             if (sortedFull.length > 12) {
@@ -2005,7 +1893,6 @@
                 data1 = sortedFull.map(function(x){ return x.v1; });
                 data2 = sortedFull.map(function(x){ return x.v2; });
             }
-
             if (charts[id]) charts[id].destroy();
             var bgColors1 = labels.map(function(l, idx) { 
                 return (selectionItemState[key] && selectionItemState[key].length && selectionItemState[key].indexOf(l) === -1 && l !== 'Others') ? CONFIG.dimColor : CONFIG.colors[idx % 8];
@@ -2016,7 +1903,6 @@
                  var bgPhase2 = bgColors1.map(function(c) { return c === CONFIG.dimColor ? c : c + '80'; });
                  datasets.push({ label: 'Period B Volume (Qty)', data: data2, backgroundColor: bgPhase2 });
             }
-
             charts[id] = new Chart(document.getElementById(id), { 
                 type: 'doughnut', data: { labels: labels, datasets: datasets }, 
                 options: { 
@@ -2071,13 +1957,11 @@
                 var bgColors2 = labels.map(function(l) { return selectionItemState['item_name'].length && selectionItemState['item_name'].indexOf(l) === -1 ? '#ffedd5' : '#f97316'; });
                 datasets.push({ label: 'Period B Volume (Qty)', data: data2, backgroundColor: bgColors2 });
             }
-
             charts[id] = new Chart(document.getElementById(id), { 
                 type: 'bar', data: { labels: labels, datasets: datasets }, 
                 options: { indexAxis: 'y', maintainAspectRatio: false, onClick: function(e, el) { if(el.length > 0) toggleItemFilter('item_name', labels[el[0].index], e.native ? e.native.ctrlKey : false); }, plugins: { legend: { display: false } } }
             });
         }
-
         function draw(id, type, key, order) {
             var labels = order || Object.keys(globalAggregates[key]).sort(); 
             var data1 = labels.map(function(l) { return globalAggregates[key][l] ? globalAggregates[key][l].total : 0; });
@@ -2085,7 +1969,6 @@
             if (charts[id]) charts[id].destroy();
             var isDoughnut = type === 'doughnut';
             var isLine = type === 'line';
-
             if(typeof Chart === 'undefined') { logDebug("Chart is undefined, cannot draw"); return; }
             var bgColors1 = [];
             for (var i=0; i<labels.length; i++) {
@@ -2113,7 +1996,6 @@
                     tension: isLine ? 0.4 : 0, pointBackgroundColor: '#f97316', pointRadius: isLine ? 4 : 0
                 });
             }
-
             charts[id] = new Chart(document.getElementById(id), { 
                 type: type, data: { labels: labels, datasets: datasets }, 
                 options: { 
@@ -2141,7 +2023,6 @@
                 }
             });
         }
-
         function toggleFilter(key, val, multi) { 
             if(!multi) {
                 selectionState[key] = (selectionState[key].length === 1 && selectionState[key][0] === val) ? [] : [val]; 
@@ -2155,7 +2036,6 @@
             }
             updateDashboard(); 
         }
-
         function toggleItemFilter(key, val, multi) { 
             if(!selectionItemState[key]) selectionItemState[key] = [];
             if(!multi) {
@@ -2170,7 +2050,6 @@
             }
             updateDashboard(); 
         }
-
         function renderPivot() {
             var dim = selectionState.restaurant_name.length ? 'group_name' : 'restaurant_name'; 
             var agg = aggregate(filteredData, dim);
@@ -2182,7 +2061,6 @@
             } else {
                 head.innerHTML = '<tr><th class="p-2 text-left">Dimension</th><th class="text-right p-2">Orders</th><th class="text-right p-2">Base Amt</th><th class="text-right p-2 text-gray-400">Tax</th><th class="text-right p-2 font-bold font-bold">Total Sales</th><th class="text-right p-2 text-blue-600">AOV</th></tr>';
             }
-
             var body = document.getElementById('pivotBody'); 
             body.innerHTML = '';
             
@@ -2197,7 +2075,6 @@
                 var v2B = aggComp[b] ? aggComp[b].total : 0;
                 return (valB + v2B) - (valA + v2A); 
             });
-
             
             for(var i=0; i<sortedKeys.length; i++) {
                 var k = sortedKeys[i];
@@ -2225,7 +2102,6 @@
                 body.appendChild(tr);
             }
         }
-
         function updateFilterBadges() { 
             var c = document.getElementById('active-filters'); 
             c.innerHTML = ''; 
@@ -2271,11 +2147,9 @@
             
             updateDashboard(); 
         }
-
         function initApp() {
             try {
                 logDebug("Binding Event Listeners");
-
                 document.getElementById('devToggleBtn').addEventListener('click', function() {
                     var banner = document.getElementById('debug-banner');
                     if (banner.classList.contains('hidden')) {
@@ -2291,9 +2165,7 @@
                 document.getElementById('tab1-btn').addEventListener('click', function() { switchTab(1); });
                 document.getElementById('tab2-btn').addEventListener('click', function() { switchTab(2); });
                 document.getElementById('tab3-btn').addEventListener('click', function() { switchTab(3); });
-
                 document.getElementById('dateBreakupFilter').addEventListener('change', updateDashboard);
-
                 document.getElementById('nav-setup-db').addEventListener('click', toggleDbModal);
                 document.getElementById('empty-setup-db').addEventListener('click', toggleDbModal);
                 document.getElementById('btn-modal-cancel').addEventListener('click', toggleDbModal);
@@ -2326,7 +2198,6 @@
                 document.getElementById('btn-close-ai').addEventListener('click', closeAiModal);
                 document.getElementById('btn-got-it').addEventListener('click', closeAiModal);
                 document.getElementById('btn-reset-filters').addEventListener('click', resetFilters);
-
                 document.getElementById('dateStart').addEventListener('change', updateDashboard);
                 document.getElementById('dateEnd').addEventListener('change', updateDashboard);
                 document.getElementById('dateStartComp').addEventListener('change', updateDashboard);
@@ -2352,7 +2223,6 @@
                     if(e.target.checked) flexRow.classList.remove('hidden'); else flexRow.classList.add('hidden');
                     updateDashboard();
                 });
-
                 document.getElementById('areaFilter2').addEventListener('change', updateDashboard);
                 document.getElementById('paymentFilter2').addEventListener('change', updateDashboard);
                 document.getElementById('statusFilter2').addEventListener('change', updateDashboard);
@@ -2377,10 +2247,8 @@
                     localStorage.setItem('supabase_config', JSON.stringify(defaultConf));
                     syncSupabase();
                 }
-
             } catch(e) { logDebug("Init error: " + e.message); }
         }
-
         async function checkAuth() {
             logDebug("Checking Authentication...");
             if (!supabaseClient) {
@@ -2389,10 +2257,8 @@
                 if(url && key) initSupabase(url, key);
             }
             if (!supabaseClient) return showLoginScreen("Supabase client not initialized.");
-
             const { data: { session }, error } = await supabaseClient.auth.getSession();
             if (error) { showLoginScreen(error.message); return; }
-
             if (session && session.user) {
                 const email = session.user.email || "";
                 if (email.endsWith('@wishvishfoods.com')) {
@@ -2406,7 +2272,6 @@
                 showLoginScreen();
             }
         }
-
         async function handleLogin() {
             if (!supabaseClient) return alert("Configuration error. Check settings.");
             const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -2418,13 +2283,11 @@
             });
             if (error) alert("Login Error: " + error.message);
         }
-
         async function handleLogout() {
             if(supabaseClient) await supabaseClient.auth.signOut();
             localStorage.removeItem('supabase_config');
             window.location.reload();
         }
-
         function showLoginScreen(msg) {
             document.getElementById('login-overlay').classList.remove('hidden');
             document.getElementById('main-app-container').classList.add('hidden');
@@ -2433,12 +2296,10 @@
                 err.textContent = msg; err.classList.remove('hidden');
             }
         }
-
         function hideLoginScreen() {
             document.getElementById('login-overlay').classList.add('hidden');
             document.getElementById('main-app-container').classList.remove('hidden');
         }
-
         window.onload = function() {
             logDebug("WishVish Boot...");
             var saved = localStorage.getItem('supabase_config');
@@ -2456,11 +2317,9 @@
                 showLoginScreen("Configuration error. Check settings.");
             }
         };
-
         document.getElementById('googleAuthBtn').onclick = handleLogin;
         document.getElementById('logoutBtn').onclick = handleLogout;
     </script>
 </div> <!-- main-app-container end -->
-
 </body>
 </html>
