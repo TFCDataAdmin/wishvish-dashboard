@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Summary Dashboard</title>
+    
+    <!-- SCRIPT BLOCK 1: ENHANCED ERROR HANDLER -->
+    <script>
+        function logDebug(msg) {
+            var el = document.getElementById('debug-log');
+            if(el) { el.innerHTML += '<br>=> ' + msg; }
+            console.log(msg);
+        }
+        window.onerror = function(msg, url, line, col, error) {
+            var file = url ? (url.indexOf('.com') > -1 ? url.split('.com')[1] : url) : 'Inline';
+            logDebug('<span style="color:#ffaaaa">FATAL: ' + msg + '<br>&nbsp;&nbsp;File: ' + file + '<br>&nbsp;&nbsp;Line: ' + line + ' (Col ' + col + ')</span>');
+            return false;
+        };
+        window.onunhandledrejection = function(e) {
+            logDebug('<span style="color:#ffaaaa">PROMISE REJECTION: ' + (e.reason ? e.reason.message || e.reason : 'Unknown') + '</span>');
+        };
+        logDebug("V5 Pure ES5 Error handler active.");
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --p1: #1e40af; --p2: #3b82f6; --s1: #059669; --s2: #10b981; }
+        .loading-spinner { border: 3px solid #f3f4f6; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .card { background: white; border-radius: 1rem; border: 1px solid #f1f5f9; box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 1.25rem; }
+        .stat-label { color: #64748b; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.025em; margin-bottom: 0.25rem; }
+        .stat-value { color: #1e293b; font-size: 1.5rem; font-weight: 800; }
+        .chart-container { position: relative; width: 100%; height: 100%; }
+        .pivot-row:hover { background-color: #f8fafc; cursor: pointer; }
+        .pivot-row.selected { background-color: #eff6ff; border-left: 3px solid #3b82f6; }
+        .active-tab { border-bottom: 2px solid #3b82f6; color: #1e40af; font-weight: 700; }
+        .badge { display: inline-flex; items-center: center; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+        
+        /* Auth Screen Styles */
+        #login-overlay { background: radial-gradient(circle at top right, #f8fafc, #f1f5f9); z-index: 1000; }
+        .login-card { background: white; border-radius: 1.5rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); }
+        
+        /* Table Resizer Styles */
+        .resizable { table-layout: fixed !important; width: 100% !important; }
+        .resizable th, .resizable td { overflow: hidden; word-break: break-word; vertical-align: top; }
+        .resizable th { position: relative; }
+        .resizer {
+            position: absolute; top: 0; right: 0; width: 4px; cursor: col-resize; user-select: none; height: 100%;
+            z-index: 50; border-right: 1px solid #e5e7eb; transition: all 0.2s;
+        }
+        .resizer:hover { border-right: 3px solid #3b82f6; border-left: 1px solid #3b82f6; background: rgba(59, 130, 246, 0.05); }
+        .resizing { border-right: 3px solid #3b82f6; border-right-style: dashed; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans leading-tight">
+
+    <!-- Login Gatekeeper Overlay -->
+    <div id="login-overlay" class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="login-card w-full max-w-md p-8 text-center animate-in fade-in zoom-in duration-500">
+            <div class="mb-6 flex justify-center">
+                <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                </div>
+            </div>
+            <h1 class="text-2xl font-black text-gray-800 mb-2">WishVish Analytics</h1>
+            <p class="text-sm text-gray-500 mb-8">Please sign in with your corporate account to access the dashboard.</p>
+            
+            <button id="googleAuthBtn" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 px-6 py-3.5 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm">
+                <img src="https://www.google.com/favicon.ico" class="w-5 h-5" alt="Google">
+                Sign in with @wishvishfoods.com
+            </button>
+            
+            <div id="authError" class="mt-4 p-3 bg-red-50 text-red-600 text-xs font-bold rounded-lg hidden"></div>
+            
+            <div class="mt-10 pt-6 border-t border-gray-100 italic text-[10px] text-gray-400">
+                Authorized Personnel Only &copy; 2026 WishVish Foods.
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container (Hidden until Auth) -->
+    <div id="main-app-container" class="hidden">
+
+
+    <!-- DEBUG BANNER -->
+    <div id="debug-banner" class="bg-red-600 text-white p-3 text-sm font-bold z-[100] relative w-full shadow-lg h-32 overflow-y-auto hidden">
+        <div class="flex justify-between items-center">
+            <p>✅ V5 Ultimate ES5 Build Uploaded!</p>
+            <button id="closeBannerBtn" class="text-white hover:text-red-200">×</button>
+        </div>
+        <p class="font-normal text-xs mt-1" id="debug-log">System initializing...</p>
+    </div>
+
+    <nav class="bg-white border-b px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-50">
+        <div>
+            <h1 class="text-xl font-bold text-gray-800">Analytics Dashboard</h1>
+            <p class="text-sm text-gray-500">Live Supabase Sync & AI Analysis</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="aiToggleBtn" class="bg-gray-100 hover:bg-gray-200 transition-colors text-gray-700 text-[11px] font-bold px-4 py-2 rounded-full uppercase flex items-center gap-2 border border-gray-200 transition-colors">
+                <span class="text-indigo-600 text-sm">✨</span> Gemini Insights
+            </button>
+            <button id="devToggleBtn" class="bg-slate-800 hover:bg-slate-900 transition-all text-white text-[11px] font-bold px-4 py-2 rounded-full uppercase flex items-center gap-2 shadow-lg shadow-gray-200">
+                <span class="text-gray-400 font-mono text-xs">&lt;/&gt;</span> Dev Logs
+            </button>
+            <button id="nav-setup-db" class="bg-white hover:bg-gray-50 transition-colors text-gray-600 text-[11px] font-bold px-4 py-2 rounded-full uppercase border border-gray-300 flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                DB Settings
+            </button>
+            <button id="syncBtn" class="bg-blue-600 hover:bg-blue-700 transition-all text-white text-[11px] font-bold px-4 py-2 rounded-full uppercase shadow-lg shadow-blue-200 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                Sync Live
+            </button>
+            <button id="logoutBtn" class="ml-2 bg-rose-50 hover:bg-rose-100 text-rose-500 font-bold px-3 py-2 rounded-full text-[11px] uppercase transition-colors">Logout</button>
+        </div>
+    </nav>
+    
+    <div id="tabBar" class="bg-white border-b px-6 flex items-center gap-6 hidden sticky top-[72px] z-40 shadow-sm">
+        <button id="tab1-btn" class="py-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-colors">Order Summary</button>
+        <button id="tab2-btn" class="py-3 text-sm font-bold text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-colors">Order Item Summary</button>
+        <button id="tab3-btn" class="py-3 text-sm font-bold text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-colors">Daily Breakup</button>
+    </div>
+
+    <!-- Supabase Config Modal -->
+    <div id="dbModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-2">
+                    <h2 class="text-xl font-bold text-gray-800">Supabase Connection</h2>
+                    <span class="bg-green-100 text-green-700 text-[10px] px-2 py-1 rounded font-bold uppercase">Pre-configured</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-4">Select a table from the discovered list below.</p>
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Project URL</label>
+                            <button onclick="localStorage.removeItem('supabase_config'); location.reload();" class="text-[10px] text-blue-500 hover:underline">Reset Connection</button>
+                        </div>
+                        <input type="text" id="sbUrl" value="https://wroyimrtmtqwtphprvay.supabase.co" class="w-full p-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Anon Key</label>
+                        <input type="password" id="sbKey" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indyb3lpbXJ0bXRxd3RwaHBydmF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDg3ODUsImV4cCI6MjA4NjM4NDc4NX0.xOEsHGG06EiKweQV9ssWErs5nmFiHX9k1eaCNXoCbaA" class="w-full p-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Gemini API Key</label>
+                        <input type="password" id="apiKeyInput" value="AIzaSyAn7Y835oeGjZemQl8ugiljnat9M_q11Yo" class="w-full p-2 bg-white border border-blue-200 rounded-lg text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Enter Gemini AI Studio Key">
+                    </div>
+                    <div id="discoveryStatus" class="flex items-center gap-2 py-2">
+                        <div id="discoverLoader" class="loading-spinner" style="width: 14px; height: 14px; border-width: 2px;"></div>
+                        <span id="discoverText" class="text-[10px] font-medium text-gray-400">Verifying live connection...</span>
+                    </div>
+                    <div id="tableSelectGroup" class="hidden transition-all duration-300">
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Order Summary Table</label>
+                        <select id="sbTableSelect" class="w-full mb-3 p-2 bg-white border border-blue-200 rounded-lg text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">-- Choose Order Table --</option>
+                        </select>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Order Item Summary Table</label>
+                        <select id="sbTableSelect2" class="w-full p-2 bg-white border border-blue-200 rounded-lg text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">-- Choose Item Table --</option>
+                        </select>
+                    </div>
+
+                    <!-- Manual Entry Container -->
+                    <div id="manualTableGroup" class="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200 shadow-inner">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2">Live Table Configuration</p>
+                        
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Order Summary (Tab 1)
+                            </label>
+                            <div class="relative group">
+                                <input type="text" id="manualTable1" readonly class="w-full p-2 pr-10 border border-gray-200 rounded text-sm bg-gray-100/50 text-gray-600 transition-all focus:bg-white" value="order_summary">
+                                <button type="button" onclick="toggleEdit('manualTable1')" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-blue-500 transition-colors" title="Edit Table Name">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 flex items-center gap-1.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Order Item Summary (Tab 2)
+                            </label>
+                            <div class="relative group">
+                                <input type="text" id="manualTable2" readonly class="w-full p-2 pr-10 border border-gray-200 rounded text-sm bg-gray-100/50 text-gray-600 transition-all focus:bg-white" value="order_item_summary">
+                                <button type="button" onclick="toggleEdit('manualTable2')" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-emerald-500 transition-colors" title="Edit Table Name">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center px-1">
+                        <p class="text-[10px] text-gray-400">Discovery status: <span id="tableCount">Restricted</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 p-4 flex justify-end gap-3 border-t">
+                <button id="btn-modal-cancel" class="px-4 py-2 text-sm text-gray-600 font-semibold">Cancel</button>
+                <button id="saveDbBtn" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">Save & Sync</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white/90 z-[70] hidden flex flex-col items-center justify-center">
+        <div class="loading-spinner mb-4"></div>
+        <p class="text-gray-800 font-bold text-lg" id="loading-text">Fetching data from Supabase...</p>
+        <div class="mt-2 bg-gray-100 px-6 py-2 rounded-full border border-gray-200 shadow-sm">
+            <span class="text-sm font-semibold text-blue-600" id="loading-count">Rows Pulled: 0</span>
+        </div>
+    </div>
+
+    <main id="main-content" class="p-6 hidden">
+        <div id="tab1-content">
+            <!-- AI Intelligence Bar -->
+        <div id="ai-insights-section" class="ai-section-panel hidden grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 transition-all duration-300">
+            <div class="card lg:col-span-2 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100 relative overflow-hidden group">
+                <div class="relative z-10">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-lg">✨</span>
+                        <h3 class="font-bold text-gray-800 uppercase text-xs tracking-widest">AI Smart Insights</h3>
+                    </div>
+                    <p id="ai-insight-text" class="text-sm text-gray-600 italic">Click the button to analyze current trends and patterns in your order data...</p>
+                </div>
+                <button id="ai-insight-btn" class="absolute top-4 right-4 z-20 bg-white shadow-sm border border-blue-200 px-4 py-1.5 rounded-full text-xs font-bold text-blue-600 hover:bg-blue-50 transition-all flex items-center gap-2 cursor-pointer">
+                    Generate ✨
+                </button>
+            </div>
+            <div class="card flex flex-col justify-center gap-3">
+                <button id="btn-growth" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 w-full flex items-center justify-center gap-2 transition-colors">
+                    Growth Strategies ✨
+                </button>
+                <button id="btn-persona" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 w-full flex items-center justify-center gap-2 transition-colors">
+                    Diner Persona ✨
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+            <div class="card md:col-span-5 lg:col-span-4">
+                <div class="flex justify-between items-center mb-1">
+                    <label class="stat-label">Date Range</label>
+                    <label class="inline-flex items-center cursor-pointer text-xs">
+                        <input type="checkbox" id="compareToggle" class="sr-only peer">
+                        <div class="relative w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-500"></div>
+                        <span class="ml-2 text-gray-600 font-semibold">Compare</span>
+                    </label>
+                </div>
+                <div class="flex flex-col gap-2 relative">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
+                        <input type="date" id="dateStart" class="w-full p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm">
+                        <span class="text-gray-400">-</span>
+                        <input type="date" id="dateEnd" class="w-full p-2 bg-gray-50 border border-gray-100 rounded-lg text-sm">
+                    </div>
+                    <div id="compareRow" class="flex items-center gap-2 hidden transition-all">
+                        <span class="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0"></span>
+                        <input type="date" id="dateStartComp" class="w-full p-2 bg-orange-50 border border-orange-100 rounded-lg text-sm">
+                        <span class="text-gray-400">-</span>
+                        <input type="date" id="dateEndComp" class="w-full p-2 bg-orange-50 border border-orange-100 rounded-lg text-sm">
+                    </div>
+                </div>
+            </div>
+            <div class="card md:col-span-2 lg:col-span-2">
+                <label class="stat-label">Area</label>
+                <select id="areaFilter" class="w-full mt-1 p-2 bg-gray-50 border rounded-lg text-sm"></select>
+            </div>
+            <div class="card md:col-span-2 lg:col-span-2">
+                <label class="stat-label">Payment</label>
+                <select id="paymentFilter" class="w-full mt-1 p-2 bg-gray-50 border rounded-lg text-sm"></select>
+            </div>
+            <div class="card md:col-span-2 lg:col-span-2">
+                <label class="stat-label">Status</label>
+                <select id="statusFilter" class="w-full mt-1 p-2 bg-gray-50 border rounded-lg text-sm"></select>
+            </div>
+            <div class="card md:col-span-1 lg:col-span-2 flex flex-col justify-center items-center">
+                <button id="btn-reset-filters" class="bg-blue-600 text-white px-2 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 w-full">Reset</button>
+            </div>
+        </div>
+
+        <div id="active-filters" class="flex flex-wrap gap-2 mb-4 min-h-[32px]"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="card text-center border-l-4 border-blue-500 flex flex-col justify-center relative p-6 min-h-[100px]">
+                <p class="stat-label">Total Revenue</p>
+                <p id="kpi-revenue" class="stat-value text-xl md:text-2xl mt-1">₹0</p>
+                <div id="kpi-revenue-comp" class="mt-2 text-xs font-semibold"></div>
+            </div>
+            <div class="card text-center border-l-4 border-green-500 flex flex-col justify-center relative p-6 min-h-[100px]">
+                <p class="stat-label">Total Orders</p>
+                <p id="kpi-orders" class="stat-value text-xl md:text-2xl mt-1">0</p>
+                <div id="kpi-orders-comp" class="mt-2 text-xs font-semibold"></div>
+            </div>
+            <div class="card text-center border-l-4 border-amber-500 flex flex-col justify-center relative p-6 min-h-[100px]">
+                <p class="stat-label">Avg Order Value</p>
+                <p id="kpi-aov" class="stat-value text-xl md:text-2xl mt-1">₹0</p>
+                <div id="kpi-aov-comp" class="mt-2 text-xs font-semibold"></div>
+            </div>
+            <div class="card text-center border-l-4 border-purple-500 flex flex-col justify-center relative p-6 min-h-[100px]">
+                <p class="stat-label">Avg Persons</p>
+                <p id="kpi-persons" class="stat-value text-xl md:text-2xl mt-1">0</p>
+                <div id="kpi-persons-comp" class="mt-2 text-xs font-semibold"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="card">
+                <h3 class="font-bold text-gray-700 mb-4">1. Outlet Performance</h3>
+                <div class="h-72 chart-container"><canvas id="outletChart"></canvas></div>
+            </div>
+            <div class="card">
+                <h3 class="font-bold text-gray-700 mb-4">2. Avg Order Value (AOV) Buckets</h3>
+                <div class="h-72 chart-container"><canvas id="aovChart1"></canvas></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-8">
+            <div class="card col-span-12 lg:col-span-4">
+                <h3 class="font-bold text-gray-700 mb-4">3. Slot Velocity</h3>
+                <div class="h-72 chart-container"><canvas id="slotChart"></canvas></div>
+            </div>
+            <div class="card col-span-12 lg:col-span-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-700" id="pivotTitle">4. Detailed Pivot View</h3>
+                </div>
+                <div class="pivot-table-container max-h-[350px] overflow-x-auto overflow-y-auto">
+                    <table id="pivotTable" class="w-full text-[11px] resizable table-fixed">
+                        <thead id="pivotHead" class="sticky top-0 z-10 bg-gray-100">
+                            <tr>
+                                <th class="p-2 text-left w-1/4">Dimension</th>
+                                <th class="text-right p-2">Orders</th>
+                                <th class="text-right p-2">Base Amt</th>
+                                <th class="text-right p-2 text-gray-400">Tax</th>
+                                <th class="text-right p-2">Total Sales</th>
+                                <th class="text-right p-2">AOV</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pivotBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        </div> <!-- end tab1 -->
+        
+        <div id="tab2-content" class="hidden">
+            <!-- AI Intelligence Bar Tab 2 -->
+            <div id="ai-insights-section2" class="ai-section-panel hidden grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 transition-all duration-300">
+                <div class="card lg:col-span-2 bg-gradient-to-r from-emerald-50 to-cyan-50 border-emerald-100 relative overflow-hidden group">
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-lg">✨</span>
+                            <h3 class="font-bold text-gray-800 uppercase text-xs tracking-widest">SKU Smart Insights</h3>
+                        </div>
+                        <p id="ai-insight-text2" class="text-sm text-gray-600 italic">Click to analyze SKU patterns, category trends, and pricing mix...</p>
+                    </div>
+                    <button id="ai-insight-btn2" class="absolute top-4 right-4 z-20 bg-white shadow-sm border border-emerald-200 px-4 py-1.5 rounded-full text-xs font-bold text-emerald-600 hover:bg-emerald-50 transition-all flex items-center gap-2 cursor-pointer">
+                        Generate ✨
+                    </button>
+                </div>
+                <div class="card flex flex-col justify-center gap-3">
+                    <button id="btn-growth2" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 w-full flex items-center justify-center gap-2 transition-colors">
+                        Menu Optimization ✨
+                    </button>
+                    <button id="btn-persona2" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 w-full flex items-center justify-center gap-2 transition-colors">
+                        Purchasing Persona ✨
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-10 gap-x-3 gap-y-4 mb-6">
+                <div class="card md:col-span-4 lg:col-span-3">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="stat-label">Date Range</label>
+                        <label class="inline-flex items-center cursor-pointer text-xs">
+                            <input type="checkbox" id="compareToggle2" class="sr-only peer">
+                            <div class="relative w-7 h-4 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500"></div>
+                            <span class="ml-2 text-gray-600 font-semibold">Compare</span>
+                        </label>
+                    </div>
+                    <div class="flex flex-col gap-2 relative">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                            <input type="date" id="dateStart2" class="w-full p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm">
+                            <span class="text-gray-400">-</span>
+                            <input type="date" id="dateEnd2" class="w-full p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm">
+                        </div>
+                        <div id="compareRow2" class="flex items-center gap-2 hidden transition-all">
+                            <span class="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0"></span>
+                            <input type="date" id="dateStartComp2" class="w-full p-2 bg-orange-50 border border-orange-100 rounded-lg text-sm">
+                            <span class="text-gray-400">-</span>
+                            <input type="date" id="dateEndComp2" class="w-full p-2 bg-orange-50 border border-orange-100 rounded-lg text-sm">
+                        </div>
+                    </div>
+                </div>
+                <div class="card md:col-span-3 lg:col-span-2">
+                    <label class="stat-label">Restaurant</label>
+                    <select id="restaurantFilter2" class="w-full mt-1 p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm"></select>
+                </div>
+                <div class="card md:col-span-3 lg:col-span-1">
+                    <label class="stat-label">Area</label>
+                    <select id="areaFilter2" class="w-full mt-1 p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm"></select>
+                </div>
+                <div class="card md:col-span-2 lg:col-span-1">
+                    <label class="stat-label">Payment</label>
+                    <select id="paymentFilter2" class="w-full mt-1 p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm"></select>
+                </div>
+                <div class="card md:col-span-2 lg:col-span-1">
+                    <label class="stat-label">Status</label>
+                    <select id="statusFilter2" class="w-full mt-1 p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm"></select>
+                </div>
+                <div class="card md:col-span-2 lg:col-span-1">
+                    <label class="stat-label">Slot</label>
+                    <select id="slotFilter2" class="w-full mt-1 p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm">
+                        <option value="all">All Slots</option>
+                        <option value="Breakfast">Breakfast</option>
+                        <option value="Lunch">Lunch</option>
+                        <option value="Snacks">Snacks</option>
+                        <option value="Dinner">Dinner</option>
+                    </select>
+                </div>
+                <div class="card md:col-span-2 lg:col-span-1">
+                    <label class="stat-label">AOV Bucket</label>
+                    <select id="aovBucketFilter2" class="w-full mt-1 p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm">
+                        <option value="all">All Buckets</option>
+                        <option value="0-200">0-200</option>
+                        <option value="200-400">200-400</option>
+                        <option value="400-600">400-600</option>
+                        <option value="600-800">600-800</option>
+                        <option value="800-1000">800-1000</option>
+                        <option value="1000-1200">1000-1200</option>
+                        <option value=">1200">&gt;1200</option>
+                    </select>
+                </div>
+                <div class="card md:col-span-2 lg:col-span-1 flex flex-col justify-center items-center">
+                    <button id="btn-reset-filters2" class="bg-emerald-600 text-white px-2 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 w-full">Reset</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div class="card text-center border-l-4 border-emerald-500 flex flex-col justify-center relative">
+                    <p class="stat-label">Total SKUs Sold</p>
+                    <p id="kpi-items-sold" class="stat-value">0</p>
+                    <div id="kpi-items-comp" class="absolute bottom-2 right-2 text-xs font-semibold"></div>
+                </div>
+                <div class="card text-center border-l-4 border-cyan-500 flex flex-col justify-center relative">
+                    <p class="stat-label">Avg Items / Invoice</p>
+                    <p id="kpi-items-invoice" class="stat-value">0.0</p>
+                    <div id="kpi-invoice-comp" class="absolute bottom-2 right-2 text-xs font-semibold"></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="card">
+                    <h3 class="font-bold text-gray-700 mb-4">1. SKU Category Profile</h3>
+                    <div class="h-72 chart-container"><canvas id="catItemChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <h3 class="font-bold text-gray-700 mb-4">2. Channel (Payment & Area) Volume</h3>
+                    <div class="h-72 chart-container"><canvas id="channelChart"></canvas></div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="card">
+                    <h3 class="font-bold text-gray-700 mb-4">3. Top 10 Items</h3>
+                    <div class="h-72 chart-container"><canvas id="topItemChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <h3 class="font-bold text-gray-700 mb-4">4. Bottom 10 Items</h3>
+                    <div class="h-72 chart-container"><canvas id="bottomItemChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card">
+                    <h3 class="font-bold text-gray-700 mb-4">5. Slot Category Behavior</h3>
+                    <div class="h-80 chart-container"><canvas id="slotCatChart"></canvas></div>
+                </div>
+                <div class="card">
+                    <h3 class="font-bold text-gray-700 mb-4">6. AOV Bucketing</h3>
+                    <div class="h-80 chart-container"><canvas id="bucketChart"></canvas></div>
+                </div>
+            </div>
+        </div> <!-- end tab2 -->
+        
+        <div id="tab3-content" class="hidden">
+            <!-- Filter Top Bar -->
+            <div class="card mb-6">
+                <div class="flex flex-col md:flex-row items-end gap-6 justify-between">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Select Date</label>
+                        <input type="date" id="dateBreakupFilter" class="w-[200px] text-sm border rounded-lg px-3 py-2 bg-purple-50 border-purple-200 text-purple-900 focus:ring-2 focus:ring-purple-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 1: Orders -->
+            <div class="mb-10">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">1. Order Breakup</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="card flex flex-col">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Slot Pivot (Orders)</h3>
+                        <div class="w-full overflow-x-auto">
+                            <table id="breakupSlotTable" class="w-full table-fixed text-[10px] whitespace-nowrap">
+                                <thead id="breakupSlotHead" class="bg-blue-100 text-blue-900 font-bold border-b border-blue-200"></thead>
+                                <tbody id="breakupSlotBody" class="divide-y divide-gray-100"></tbody>
+                                <tfoot id="breakupSlotFoot" class="bg-blue-50 font-bold border-t border-blue-200"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Slot Trajectories (Orders)</h3>
+                        <div class="h-64 chart-container"><canvas id="breakupSlotChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card flex flex-col">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Channel Pivot (Orders)</h3>
+                        <div class="w-full overflow-x-auto">
+                            <table id="breakupAreaTable" class="w-full table-fixed text-[10px] whitespace-nowrap">
+                                <thead id="breakupAreaHead" class="bg-emerald-100 text-emerald-900 font-bold border-b border-emerald-200"></thead>
+                                <tbody id="breakupAreaBody" class="divide-y divide-gray-100"></tbody>
+                                <tfoot id="breakupAreaFoot" class="bg-emerald-50 font-bold border-t border-emerald-200"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Channel Trajectories (Orders)</h3>
+                        <div class="h-64 chart-container"><canvas id="breakupAreaChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Net Sales -->
+            <div class="mb-10">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">2. Net Sales Breakup</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="card flex flex-col">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Slot Pivot (Sales)</h3>
+                        <div class="w-full overflow-x-auto">
+                            <table id="breakupSlotTableSales" class="w-full table-fixed text-[10px] whitespace-nowrap">
+                                <thead id="breakupSlotHeadSales" class="bg-blue-100 text-blue-900 font-bold border-b border-blue-200"></thead>
+                                <tbody id="breakupSlotBodySales" class="divide-y divide-gray-100"></tbody>
+                                <tfoot id="breakupSlotFootSales" class="bg-blue-50 font-bold border-t border-blue-200"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Slot Trajectories (Sales)</h3>
+                        <div class="h-64 chart-container"><canvas id="breakupSlotChartSales"></canvas></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card flex flex-col">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Channel Pivot (Sales)</h3>
+                        <div class="w-full overflow-x-auto">
+                            <table id="breakupAreaTableSales" class="w-full table-fixed text-[10px] whitespace-nowrap">
+                                <thead id="breakupAreaHeadSales" class="bg-emerald-100 text-emerald-900 font-bold border-b border-emerald-200"></thead>
+                                <tbody id="breakupAreaBodySales" class="divide-y divide-gray-100"></tbody>
+                                <tfoot id="breakupAreaFootSales" class="bg-emerald-50 font-bold border-t border-emerald-200"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Channel Trajectories (Sales)</h3>
+                        <div class="h-64 chart-container"><canvas id="breakupAreaChartSales"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Discounts -->
+            <div class="mb-10">
+                <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">3. Discounts Breakup</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="card flex flex-col">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Slot Pivot (Discounts)</h3>
+                        <div class="w-full overflow-x-auto">
+                            <table id="breakupSlotTableDisc" class="w-full table-fixed text-[10px] whitespace-nowrap">
+                                <thead id="breakupSlotHeadDisc" class="bg-blue-100 text-blue-900 font-bold border-b border-blue-200"></thead>
+                                <tbody id="breakupSlotBodyDisc" class="divide-y divide-gray-100"></tbody>
+                                <tfoot id="breakupSlotFootDisc" class="bg-blue-50 font-bold border-t border-blue-200"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Slot Trajectories (Discounts)</h3>
+                        <div class="h-64 chart-container"><canvas id="breakupSlotChartDisc"></canvas></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card flex flex-col">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Channel Pivot (Discounts)</h3>
+                        <div class="w-full overflow-x-auto">
+                            <table id="breakupAreaTableDisc" class="w-full table-fixed text-[10px] whitespace-nowrap">
+                                <thead id="breakupAreaHeadDisc" class="bg-emerald-100 text-emerald-900 font-bold border-b border-emerald-200"></thead>
+                                <tbody id="breakupAreaBodyDisc" class="divide-y divide-gray-100"></tbody>
+                                <tfoot id="breakupAreaFootDisc" class="bg-emerald-50 font-bold border-t border-emerald-200"></tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Outlet/Channel Trajectories (Discounts)</h3>
+                        <div class="h-64 chart-container"><canvas id="breakupAreaChartDisc"></canvas></div>
+                    </div>
+                </div>
+            <!-- Section 4: WoW Comparison -->
+            <div class="mt-20 mb-20 pt-10 border-t border-gray-100">
+                <div class="flex items-center gap-2 mb-4 border-b pb-2">
+                    <h2 class="text-lg font-bold text-gray-800">4. week-over-week (WoW) Comparison</h2>
+                    <span class="bg-indigo-100 text-indigo-600 text-[10px] px-2 py-0.5 rounded font-bold uppercase">vs Same Day Last Week</span>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Table 1: Current Day -->
+                    <div class="card">
+                        <h3 class="font-bold text-gray-700 mb-3 text-xs uppercase tracking-wider flex justify-between">
+                            <span id="wowHeadCurrent">Current Day</span>
+                            <span class="text-blue-500">Period A</span>
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-[10px]">
+                                <thead class="bg-gray-50 border-b">
+                                    <tr>
+                                        <th class="p-2 text-left">Location</th>
+                                        <th class="p-2 text-right">Orders</th>
+                                        <th class="p-2 text-right">Net Sales</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wowBodyCurrent" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Table 2: Last Week -->
+                    <div class="card">
+                        <h3 class="font-bold text-gray-700 mb-3 text-xs uppercase tracking-wider flex justify-between">
+                            <span id="wowHeadLast">Last Week Same Day</span>
+                            <span class="text-gray-400">Period B</span>
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-[10px]">
+                                <thead class="bg-gray-50 border-b">
+                                    <tr>
+                                        <th class="p-2 text-left">Location</th>
+                                        <th class="p-2 text-right">Orders</th>
+                                        <th class="p-2 text-right">Net Sales</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wowBodyLast" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Table 3: Growth -->
+                    <div class="card border-l-4 border-indigo-500">
+                        <h3 class="font-bold text-gray-700 mb-3 text-xs uppercase tracking-wider flex justify-between">
+                            <span>Growth / Degrowth</span>
+                            <span class="text-indigo-500">% Δ</span>
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-[10px]">
+                                <thead class="bg-gray-50 border-b">
+                                    <tr>
+                                        <th class="p-2 text-left">Location</th>
+                                        <th class="p-2 text-right">Orders %</th>
+                                        <th class="p-2 text-right">Sales %</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="wowBodyGrowth" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Historical Comparison (Current Day)</h3>
+                        <div class="h-80 chart-container"><canvas id="wowChartCurrent"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <h3 class="font-bold text-gray-700 mb-4 text-xs uppercase tracking-wider">Historical Comparison (Last Week)</h3>
+                        <div class="h-80 chart-container"><canvas id="wowChartLast"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- end tab3 -->
+        
+    </main>
+
+    <div id="empty-state" class="flex flex-col items-center justify-center h-96 text-gray-400">
+        <div class="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center max-w-sm text-center">
+            <div class="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-6">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 2v-6m0 10v4a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2m3 3L12 3m0 0l3 3m-3-3v8"></path></svg>
+            </div>
+            <p class="text-xl font-bold text-gray-800">No Data Loaded</p>
+            <p class="text-sm mt-2">Connect to Supabase or upload a CSV to view analytics.</p>
+            <button id="empty-setup-db" class="mt-6 bg-blue-600 text-white px-6 py-2 rounded-full font-bold hover:bg-blue-700 transition-colors">Setup Database</button>
+        </div>
+    </div>
+
+    <!-- AI Overlay / Modal -->
+    <div id="aiModal" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
+            <div class="p-6 bg-gray-50 border-b flex justify-between items-center">
+                <h2 id="aiModalTitle" class="text-lg font-bold text-gray-800 flex items-center gap-2">✨ AI Analysis</h2>
+                <button id="btn-close-ai" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+            </div>
+            <div id="aiModalContent" class="p-8 overflow-y-auto text-gray-700 leading-relaxed whitespace-pre-wrap">
+                <!-- AI content here -->
+            </div>
+            <div class="p-4 bg-gray-50 border-t flex justify-end">
+                <button id="btn-got-it" class="px-6 py-2 bg-blue-600 text-white rounded-full font-bold text-sm">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT BLOCK 2: PURE ES5 MAIN LOGIC -->
+    <script>
+        if(typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
+            Chart.register(ChartDataLabels);
+        }
+        logDebug("Main script (ES5) evaluating");
+
+        var SB_URL = "https://wroyimrtmtqwtphprvay.supabase.co";
+        var SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indyb3lpbXJ0bXRxd3RwaHBydmF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDg3ODUsImV4cCI6MjA4NjM4NDc4NX0.xOEsHGG06EiKweQV9ssWErs5nmFiHX9k1eaCNXoCbaA";
+        var apiKey = "AIzaSyAn7Y835oeGjZemQl8ugiljnat9M_q11Yo";
+
+        var rawData = [];
+        var filteredData = []; var filteredDataComp = [];
+        var activeBaseFilter = []; var activeBaseFilterComp = [];
+        var globalAggregates = {}; var globalCompareAggregates = {};
+        var compareMode1 = false;
+        
+        var rawItemData = [];
+        var filteredItemData = []; var filteredItemDataComp = [];
+        var activeBaseItemFilter = []; var activeBaseItemFilterComp = [];
+        var itemAggregates = {}; var itemCompareAggregates = {};
+        var compareMode2 = false;
+
+        var charts = {};
+        var supabaseClient = null;
+        var selectionState = { restaurant_name: [], group_name: [], processedSlot: [], aovBucket: [] };
+        var selectionItemState = { category_name: [], item_name: [], processedSlot: [], restaurant_name: [], channel: [], aovBucket: [] };
+        var activeTab = 1;
+
+        var CONFIG = {
+            colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#475569'],
+            dimColor: '#f1f5f9',
+            slots: { endB: 12, endL: 15.5, endT: 18.5 },
+            pageSize: 1000 
+        };
+
+        var indianFormatter = new Intl.NumberFormat('en-IN', {
+            style: 'currency', currency: 'INR', maximumFractionDigits: 0
+        });
+
+        function callGemini(prompt, systemPrompt) {
+            if (!apiKey) {
+                return Promise.reject(new Error("Gemini API Key is missing. Please add it in DB Settings."));
+            }
+            systemPrompt = systemPrompt || "You are a professional restaurant data analyst. Provide concise, actionable insights.";
+            var bodyObj = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] }
+            };
+            
+            return _tryGeminiModel(bodyObj, "gemini-1.5-flash").then(function(res) {
+                return res;
+            }).catch(function(err1) {
+                logDebug("Primary model failed: " + err1.message + ". Trying fallback gemini-2.0-flash...");
+                return _tryGeminiModel(bodyObj, "gemini-2.0-flash");
+            });
+        }
+
+        function _tryGeminiModel(bodyObj, modelName) {
+            var url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
+            return fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bodyObj)
+            }).then(function(response) {
+                if (!response.ok) {
+                    return response.text().then(function(text) {
+                        var msg = "API failed with status " + response.status;
+                        try {
+                            var json = JSON.parse(text);
+                            if (json.error && json.error.message) {
+                                msg += " - " + json.error.message;
+                            }
+                        } catch(e) {}
+                        throw new Error(msg);
+                    });
+                }
+                return response.json();
+            }).then(function(result) {
+                if (result && result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+                    return result.candidates[0].content.parts[0].text;
+                } else {
+                    return "No insights available.";
+                }
+            });
+        }
+
+        function generateInsights() {
+            logDebug("Generate Insights clicked");
+            var btn = document.getElementById('ai-insight-btn');
+            var textEl = document.getElementById('ai-insight-text');
+            btn.disabled = true;
+            btn.innerHTML = "Analyzing... ✨";
+            textEl.classList.add('ai-pulse');
+
+            var summary = getSummaryForAI();
+            var prompt = "Analyze this summary of restaurant data: " + JSON.stringify(summary) + ". \n            Identify the single most interesting trend or anomaly. Keep it to 2 sentences.";
+
+            callGemini(prompt).then(function(insight) {
+                textEl.textContent = insight;
+                textEl.classList.remove('italic');
+                btn.disabled = false;
+                btn.innerHTML = "Generate ✨";
+                textEl.classList.remove('ai-pulse');
+            }).catch(function(e) {
+                textEl.textContent = "Unable to connect: " + e.message;
+                logDebug("AI Insight Error: " + e.message);
+                btn.disabled = false;
+                btn.innerHTML = "Generate ✨";
+                textEl.classList.remove('ai-pulse');
+            });
+        }
+
+        function askRecommendations() {
+            logDebug("Growth Strategies clicked");
+            showAiModal("Fetching Growth Strategies...", "Growth Strategies ✨");
+            var summary = getSummaryForAI();
+            var prompt = "Based on these restaurant metrics: " + JSON.stringify(summary) + ", \n            suggest 3 specific growth strategies to increase revenue and order volume. \n            Focus on slots with lower performance and high-performing brand categories. Use bullet points.";
+
+            callGemini(prompt).then(function(recommendations) {
+                updateAiModal(recommendations);
+            }).catch(function(e) {
+                updateAiModal("Error generating recommendations: " + e.message);
+            });
+        }
+
+        function generatePersona() {
+            logDebug("Diner Persona clicked");
+            showAiModal("Identifying Typical Diner...", "Diner Persona ✨");
+            var summary = getSummaryForAI();
+            var prompt = "Analyze this data: " + JSON.stringify(summary) + ". \n            Create a Diner Persona for the most common type of customer. \n            Include their likely motivation (e.g., family dinner, quick solo lunch), \n            estimated spending habit, and preferred brand categories. Be creative but data-driven.";
+
+            callGemini(prompt).then(function(persona) {
+                updateAiModal(persona);
+            }).catch(function(e) {
+                updateAiModal("Error generating persona: " + e.message);
+            });
+        }
+
+        function getSummaryForAI() {
+            var outletData = Object.keys(globalAggregates.restaurant_name).map(function(k) {
+                return {name: k, revenue: globalAggregates.restaurant_name[k].total, count: globalAggregates.restaurant_name[k].count};
+            });
+            var catData = Object.keys(globalAggregates.group_name).map(function(k) {
+                return {name: k, revenue: globalAggregates.group_name[k].total};
+            });
+            var slotData = Object.keys(globalAggregates.processedSlot).map(function(k) {
+                return {slot: k, count: globalAggregates.processedSlot[k].count};
+            });
+            
+            return {
+                totalRevenue: filteredData.reduce(function(s,r) { return s + r.total; }, 0),
+                orderCount: filteredData.length,
+                topOutlets: outletData.sort(function(a,b) { return b.revenue - a.revenue; }).slice(0, 3),
+                categoryMix: catData.sort(function(a,b) { return b.revenue - a.revenue; }),
+                busiestSlots: slotData.sort(function(a,b) { return b.count - a.count; })
+            };
+        }
+
+        function getSummaryForAITab2() {
+            var topCats = Object.keys(itemAggregates.category_name).map(function(k) { return {name: k, qty: itemAggregates.category_name[k].qty}; }).sort(function(a,b){return b.qty-a.qty}).slice(0,5);
+            var topItems = Object.keys(itemAggregates.item_name).map(function(k) { return {name: k, qty: itemAggregates.item_name[k].qty}; }).sort(function(a,b){return b.qty-a.qty}).slice(0,5);
+            return {
+                totalSKUsSold: filteredItemData.reduce(function(s,r) { return s+r.qty; }, 0),
+                topCategories: topCats,
+                topItems: topItems,
+                aovBuckets: getAOVBuckets()
+            };
+        }
+
+        function generateInsights2() {
+            logDebug("Generate Insights 2 clicked");
+            var btn = document.getElementById('ai-insight-btn2');
+            var textEl = document.getElementById('ai-insight-text2');
+            btn.disabled = true; btn.innerHTML = "Analyzing... ✨"; textEl.classList.add('ai-pulse');
+            var prompt = "Analyze this restaurant SKU item mix: " + JSON.stringify(getSummaryForAITab2()) + ". \nIdentify the single most interesting trend. Keep it to 2 sentences.";
+            callGemini(prompt).then(function(insight) {
+                textEl.textContent = insight; textEl.classList.remove('italic', 'ai-pulse');
+                btn.disabled = false; btn.innerHTML = "Generate ✨";
+            }).catch(function(e) {
+                textEl.textContent = "Unable to connect: " + e.message; btn.disabled = false; btn.innerHTML = "Generate ✨"; textEl.classList.remove('ai-pulse');
+            });
+        }
+
+        function askRecommendations2() {
+            showAiModal("Optimizing Menu...", "Menu Optimization ✨");
+            var prompt = "Based on this SKU item mix: " + JSON.stringify(getSummaryForAITab2()) + ", \nsuggest 3 specific menu engineering or bundling strategies to increase item flow and basket size. Use bullet points.";
+            callGemini(prompt).then(function(res) { updateAiModal(res); }).catch(function(e) { updateAiModal("Error: " + e.message); });
+        }
+
+        function generatePersona2() {
+            showAiModal("Identifying Product Affinities...", "Purchasing Persona ✨");
+            var prompt = "Analyze this SKU item data: " + JSON.stringify(getSummaryForAITab2()) + ". \nCreate a consumer persona describing the type of buyer driving these specific item volumes and AOV buckets.";
+            callGemini(prompt).then(function(res) { updateAiModal(res); }).catch(function(e) { updateAiModal("Error: " + e.message); });
+        }
+
+        function showAiModal(initialText, title) {
+            document.getElementById('aiModalTitle').textContent = title;
+            document.getElementById('aiModalContent').innerHTML = '<div class="flex flex-col items-center py-10"><div class="loading-spinner mb-4"></div><p class="text-gray-400">' + initialText + '</p></div>';
+            document.getElementById('aiModal').classList.remove('hidden');
+        }
+
+        function updateAiModal(content) {
+            document.getElementById('aiModalContent').innerHTML = content.replace(/\n/g, '<br>');
+        }
+
+        function closeAiModal() { document.getElementById('aiModal').classList.add('hidden'); }
+
+        function toggleDbModal() { 
+            logDebug("toggleDbModal executing");
+            try {
+                var modal = document.getElementById('dbModal');
+                if(!modal) throw new Error('dbModal element not found');
+                
+                var cl = modal.classList;
+                if(cl.contains('hidden')) { cl.remove('hidden'); } else { cl.add('hidden'); }
+            } catch(e) {
+                logDebug("Error toggling modal: " + e.message);
+            }
+        }
+
+        function discoverTables() {
+            var url = document.getElementById('sbUrl').value;
+            var key = document.getElementById('sbKey').value;
+            if(!url || !key) return;
+
+            logDebug("Discovering tables via OpenAPI spec...");
+            document.getElementById('discoverLoader').classList.remove('hidden');
+            document.getElementById('discoverText').textContent = "Scanning credentials...";
+            
+            var timeout = setTimeout(function() {
+                document.getElementById('discoverText').textContent = "Server configuration verified.";
+                document.getElementById('discoverLoader').classList.add('hidden');
+            }, 5000);
+
+            var discoveryUrl = url + '/rest/v1/?apikey=' + key;
+            
+            // Try first with full headers
+            fetch(discoveryUrl, { headers: { 'apikey': key, 'Authorization': 'Bearer ' + key } })
+            .then(function(res) { 
+                if (res.status === 401) {
+                    return res.text().then(function(body) {
+                        logDebug("401 Detected! Error Body: " + body);
+                        logDebug("Retrying discovery with query param only...");
+                        return fetch(discoveryUrl);
+                    });
+                }
+                return res;
+            })
+            .then(function(res) {
+                clearTimeout(timeout);
+                if (!res.ok) {
+                    return res.text().then(function(body) {
+                        throw new Error("HTTP " + res.status + " (" + body + ")");
+                    });
+                }
+                return res.json();
+            })
+            .then(function(doc) {
+                var tables = [];
+                if (doc.definitions) {
+                    tables = Object.keys(doc.definitions);
+                } else if (doc.paths) {
+                    Object.keys(doc.paths).forEach(function(p) {
+                        if (p !== '/' && p.indexOf('/rpc/') !== 0) {
+                            var t = p.substring(1);
+                            if (tables.indexOf(t) === -1) tables.push(t);
+                        }
+                    });
+                }
+                
+                tables = tables.filter(function(t) { return t && t !== 'rpc' && t.indexOf('_') !== 0; }).sort();
+
+                if (tables.length > 0) {
+                    var select1 = document.getElementById('sbTableSelect');
+                    var select2 = document.getElementById('sbTableSelect2');
+                    var html1 = '<option value="">-- Choose Order Table --</option>';
+                    var html2 = '<option value="">-- Choose Item Table --</option>';
+                    for (var i = 0; i < tables.length; i++) {
+                        var tName = tables[i];
+                        var sel1 = tName === 'order_summary' ? ' selected' : '';
+                        var sel2 = tName === 'order_item_summary' ? ' selected' : '';
+                        html1 += '<option value="' + tName + '"' + sel1 + '>' + tName + '</option>';
+                        html2 += '<option value="' + tName + '"' + sel2 + '>' + tName + '</option>';
+                    }
+                    select1.innerHTML = html1; select2.innerHTML = html2;
+                    document.getElementById('tableSelectGroup').classList.remove('hidden');
+                    document.getElementById('discoveryStatus').classList.add('hidden');
+                    logDebug("Discovered " + tables.length + " tables.");
+                } else {
+                    document.getElementById('discoverText').textContent = "No public tables found.";
+                    document.getElementById('discoverLoader').classList.add('hidden');
+                }
+            })
+            .catch(function(e) {
+                clearTimeout(timeout);
+                // Quietly log technical errors, but keep UI clean for user
+                document.getElementById('discoverText').textContent = "Using manual configuration.";
+                document.getElementById('discoverLoader').classList.add('hidden');
+                logDebug("Discovery error (Quietly ignored): " + e.message);
+            });
+        }
+
+        function toggleEdit(id) {
+            var el = document.getElementById(id);
+            if (el.readOnly) {
+                el.readOnly = false;
+                el.classList.remove('bg-gray-100/50', 'text-gray-600');
+                el.classList.add('bg-white', 'text-gray-900', 'border-blue-500', 'ring-2', 'ring-blue-100');
+                el.focus();
+            } else {
+                el.readOnly = true;
+                el.classList.add('bg-gray-100/50', 'text-gray-600');
+                el.classList.remove('bg-white', 'text-gray-900', 'border-blue-500', 'ring-2', 'ring-blue-100');
+            }
+        }
+
+        function saveDbSettings() {
+            try {
+                logDebug("Saving DB Settings");
+                var url = document.getElementById('sbUrl').value.trim();
+                var key = document.getElementById('sbKey').value.trim();
+                
+                // Prioritize manual inputs if they are visible or if dropdowns are empty
+                var table1 = document.getElementById('sbTableSelect').value || document.getElementById('manualTable1').value;
+                var table2 = document.getElementById('sbTableSelect2').value || document.getElementById('manualTable2').value;
+                
+                if (!url || !key || !table1) return alert("URL, Key, and at least the Order Table are required.");
+                
+                apiKey = document.getElementById('apiKeyInput').value.trim();
+                localStorage.setItem('supabase_config', JSON.stringify({ url: url, key: key, table: table1, table2: table2, api_key: apiKey }));
+                
+                initSupabase(url, key);
+                document.getElementById('syncBtn').classList.remove('hidden');
+                toggleDbModal(); 
+                syncSupabase();
+            } catch(e) {
+                logDebug("saveDbSettings error: " + e.message);
+            }
+        }
+
+        function initSupabase(url, key) { 
+            logDebug("Initializing supabase client");
+            if (typeof supabase === 'undefined') {
+                logDebug("supabase library is not loaded.");
+                return false;
+            }
+            if(!url || !key) {
+                logDebug("Missing URL or Key for Supabase.");
+                return false;
+            }
+            try {
+                supabaseClient = supabase.createClient(url, key); 
+                return true;
+            } catch(e) {
+                logDebug("Error creating supabase client: " + e.message);
+                return false;
+            }
+        }
+
+        function _syncSupabaseLoop(tableName, from, allData, overlay, callback) {
+            supabaseClient.from(tableName).select('*').range(from, from + 999)
+            .then(function(res) {
+                var data = res.data;
+                var error = res.error;
+                if (error) throw error;
+                if (data && data.length) {
+                    allData = allData.concat(data);
+                    from += 1000;
+                    document.getElementById('loading-count').textContent = "Total Rows Streamed: " + allData.length;
+                    if (data.length < 1000) {
+                        callback(allData);
+                    } else {
+                        _syncSupabaseLoop(tableName, from, allData, overlay, callback);
+                    }
+                } else {
+                     callback(allData);
+                }
+            })
+            .catch(function(e) {
+                logDebug("Sync failed: " + e.message);
+                alert("Sync failed: " + e.message);
+                overlay.classList.add('hidden');
+            });
+        }
+
+        function _syncSupabaseDone(orderData, itemData, overlay) {
+            logDebug("Sync completed. Orders: " + orderData.length + ", Items: " + itemData.length);
+            initData(orderData, itemData);
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+            document.getElementById('tabBar').classList.remove('hidden');
+            overlay.classList.add('hidden');
+        }
+
+        function syncSupabase() {
+            logDebug("Starting Sync");
+            var savedStr = localStorage.getItem('supabase_config');
+            if(!savedStr) { logDebug("No config found in storage"); return; }
+            var config = JSON.parse(savedStr);
+            var overlay = document.getElementById('loading-overlay');
+            overlay.classList.remove('hidden');
+            
+            if(!supabaseClient) { logDebug("Supabase client not initialized"); overlay.classList.add('hidden'); return; }
+            
+            document.getElementById('loading-text').textContent = "Downloading Order Totals...";
+            _syncSupabaseLoop(config.table, 0, [], overlay, function(orderData) {
+                if(config.table2) {
+                    document.getElementById('loading-text').textContent = "Downloading SKU Items...";
+                    _syncSupabaseLoop(config.table2, 0, [], overlay, function(itemData) {
+                        _syncSupabaseDone(orderData, itemData, overlay);
+                    });
+                } else {
+                    _syncSupabaseDone(orderData, [], overlay);
+                }
+            });
+        }
+
+        function switchTab(tabIndex) {
+            activeTab = tabIndex;
+            document.getElementById('tab1-btn').className = (tabIndex === 1) ? 'py-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-colors' : 'py-3 text-sm font-bold text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-colors';
+            document.getElementById('tab2-btn').className = (tabIndex === 2) ? 'py-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-colors' : 'py-3 text-sm font-bold text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-colors';
+            document.getElementById('tab3-btn').className = (tabIndex === 3) ? 'py-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-colors' : 'py-3 text-sm font-bold text-gray-500 hover:text-gray-800 border-b-2 border-transparent transition-colors';
+            
+            if(tabIndex === 1) {
+                document.getElementById('tab1-content').classList.remove('hidden');
+                document.getElementById('tab2-content').classList.add('hidden');
+                document.getElementById('tab3-content').classList.add('hidden');
+            } else if(tabIndex === 2) {
+                document.getElementById('tab1-content').classList.add('hidden');
+                document.getElementById('tab2-content').classList.remove('hidden');
+                document.getElementById('tab3-content').classList.add('hidden');
+            } else {
+                document.getElementById('tab1-content').classList.add('hidden');
+                document.getElementById('tab2-content').classList.add('hidden');
+                document.getElementById('tab3-content').classList.remove('hidden');
+            }
+        }
+
+        function parseCustomDate(str) { var d = new Date(str); return isNaN(d.getTime()) ? null : d; }
+        function getSlot(h) { 
+            if (h >= 7 && h < 12.5) return "Breakfast"; 
+            if (h >= 12.5 && h < 16) return "Lunch"; 
+            if (h >= 16 && h < 19) return "Snacks"; 
+            return "Dinner"; 
+        }
+
+        function normalizePayment(p, area) {
+            p = (p || '').trim().toLowerCase();
+            area = (area || '').trim().toLowerCase();
+            if (p.indexOf('pluxee') > -1) return 'Pluxee';
+            if (p.indexOf('reserve- go') > -1 || p.indexOf('reserve-go') > -1) return 'Reserve-Go';
+            if (p.indexOf('card') > -1) return 'Card';
+            if (p.indexOf('cash') > -1) return 'Cash';
+            if (p.indexOf('online') > -1) {
+                if (area.indexOf('swiggy') > -1) return 'Swiggy';
+                if (area.indexOf('zomato') > -1) return 'Zomato';
+                return 'Online';
+            }
+            if (p.indexOf('nc') > -1) return 'Non-Chargeable';
+            if (p.indexOf('gravity') > -1) return 'Other';
+            if (p.indexOf('part payment') > -1) return 'Advance';
+            if (p.indexOf('bank transfer') > -1 || p.indexOf('bank') > -1) return 'Bank';
+            return 'Other';
+        }
+
+        function initData(orderData, itemData) {
+            logDebug("initData processing " + orderData.length + " Orders, " + itemData.length + " Items.");
+            try {
+                rawData = orderData.map(function(row) {
+                    var dt = parseCustomDate(row.date);
+                    row.dateObj = dt;
+                    row.dateOnly = dt ? dt.toISOString().split('T')[0] : null;
+                    row.processedSlot = dt ? getSlot(dt.getHours() + dt.getMinutes()/60) : 'N/A';
+                    row.group_name = (row.group_name || row.brand_grouping || 'Uncategorized').trim();
+                    row.total = parseFloat(row.total) || 0;
+                    row.my_amount = parseFloat(row.my_amount) || 0;
+                    row.tax_charges = (parseFloat(row.total_tax) || 0) + (parseFloat(row.delivery_charge) || 0);
+                    row.invoice_no = (row.invoice_no || '').trim();
+                    return row;
+                });
+                
+                rawItemData = itemData.map(function(row) {
+                    var dt = parseCustomDate(row.date || row.created_at);
+                    if (!dt && row.invoice_no) { /* attempt link date? ignore for performance */ }
+                    row.dateObj = dt;
+                    row.dateOnly = dt ? dt.toISOString().split('T')[0] : null;
+                    row.processedSlot = dt ? getSlot(dt.getHours() + dt.getMinutes()/60) : 'N/A';
+                    
+                    row.category_name = (row.category_name || row.category || 'Uncategorized').trim();
+                    row.item_name = (row.item_name || row.item || 'Unknown Menu Item').trim();
+                    row.restaurant_name = (row.restaurant_name || row.outlet || 'Unknown Outlet').trim();
+                    row.invoice_no = (row.invoice_no || row.order_id || '').trim();
+                    row.qty = parseFloat(row.qty) || parseFloat(row.quantity) || 1;
+                    row.channel = normalizePayment(row.payment_type || row.payment_mode, row.area);
+                    
+                    row.order_type = (row.order_type || 'Unknown').trim();
+                    row.status = (row.status || 'Unknown').trim();
+                    row.payment_type = (row.payment_type || row.payment_mode || 'Unknown').trim();
+                    return row;
+                });
+                
+                var aTypes = []; var pTypes = []; var sTypes = [];
+                for(var i=0; i<rawData.length; i++) {
+                    var st = (rawData[i].status || 'Unknown').trim();
+                    var ar = (rawData[i].area || 'Unknown').trim();
+                    rawData[i].status = st;
+                    rawData[i].area = ar;
+                    rawData[i].payment_type = normalizePayment(rawData[i].payment_type, ar);
+                    
+                    if (aTypes.indexOf(ar) === -1) aTypes.push(ar);
+                    if (pTypes.indexOf(rawData[i].payment_type) === -1) pTypes.push(rawData[i].payment_type);
+                    if (sTypes.indexOf(st) === -1) sTypes.push(st);
+                }
+                
+                fillSelect('areaFilter', aTypes, "All Areas");
+                fillSelect('paymentFilter', pTypes, "All Payments");
+                fillSelect('statusFilter', sTypes, "All Statuses");
+
+                // Precompute aov buckets for speedy lookup
+                var invoiceAOVMap = {};
+                for(var k=0; k<rawData.length; k++) {
+                    var vr = rawData[k];
+                    var tv = vr.total;
+                    var tb = '>1200';
+                    if(tv < 200) tb = '0-200'; else if(tv < 400) tb = '200-400'; else if(tv < 600) tb = '400-600';
+                    else if(tv < 800) tb = '600-800'; else if(tv < 1000) tb = '800-1000'; else if(tv < 1200) tb = '1000-1200';
+                    invoiceAOVMap[vr.invoice_no] = tb;
+                    rawData[k].aovBucket = tb;
+                }
+
+                var iaTypes = []; var ipTypes = []; var isTypes = []; var irTypes = [];
+                for(var j=0; j<rawItemData.length; j++) {
+                    rawItemData[j].aovBucket = invoiceAOVMap[rawItemData[j].invoice_no] || 'Unknown';
+                    var iot = rawItemData[j].area;
+                    var ipt = rawItemData[j].payment_type;
+                    var ist = rawItemData[j].status;
+                    var irt = rawItemData[j].restaurant_name;
+                    if (iot !== 'Unknown' && iaTypes.indexOf(iot) === -1) iaTypes.push(iot);
+                    if (ipt !== 'Unknown' && ipTypes.indexOf(ipt) === -1) ipTypes.push(ipt);
+                    if (ist !== 'Unknown' && isTypes.indexOf(ist) === -1) isTypes.push(ist);
+                    if (irt !== 'Unknown Outlet' && irTypes.indexOf(irt) === -1) irTypes.push(irt);
+                }
+                
+                fillSelect('areaFilter2', iaTypes, "All Areas");
+                fillSelect('paymentFilter2', ipTypes, "All Payments");
+                fillSelect('statusFilter2', isTypes, "All Statuses");
+                fillSelect('restaurantFilter2', irTypes, "All Restaurants");
+
+                // Tab 3 Init: latest date
+                var maxDate = '';
+                for(var m=0; m<rawData.length; m++) {
+                    if(!maxDate || rawData[m].dateOnly > maxDate) maxDate = rawData[m].dateOnly;
+                }
+                document.getElementById('dateBreakupFilter').value = maxDate;
+
+                updateDashboard();
+                logDebug("initData complete");
+            } catch(e) {
+                logDebug("initData error: " + e.message);
+            }
+        }
+
+        function fillSelect(id, items, label) { 
+            var html = '<option value="all">' + label + '</option>';
+            items.filter(Boolean).sort().forEach(function(i) { html += '<option value="' + i + '">' + i + '</option>'; });
+            document.getElementById(id).innerHTML = html;
+        }
+
+        function updateDashboard() {
+            try {
+                var dStart = document.getElementById('dateStart').value;
+                var dEnd = document.getElementById('dateEnd').value;
+                var oType = document.getElementById('areaFilter').value;
+                var pType = document.getElementById('paymentFilter').value;
+                var sType = document.getElementById('statusFilter').value;
+                
+                var baseFilter = rawData.filter(function(r) {
+                    return ( (!dStart || r.dateOnly >= dStart) && (!dEnd || r.dateOnly <= dEnd) ) 
+                           && (oType === 'all' || r.area === oType) 
+                           && (pType === 'all' || r.payment_type === pType)
+                           && (sType === 'all' || r.status === sType);
+                });
+                
+                filteredData = baseFilter.filter(function(r) {
+                    var nMatch = !selectionState.restaurant_name.length || selectionState.restaurant_name.indexOf(r.restaurant_name) > -1;
+                    var gMatch = !selectionState.group_name.length || selectionState.group_name.indexOf(r.group_name) > -1;
+                    var sMatch = !selectionState.processedSlot.length || selectionState.processedSlot.indexOf(r.processedSlot) > -1;
+                    var aMatch = !selectionState.aovBucket.length || selectionState.aovBucket.indexOf(r.aovBucket) > -1;
+                    return nMatch && gMatch && sMatch && aMatch;
+                });
+                activeBaseFilter = baseFilter;
+                
+                globalAggregates = { 
+                    restaurant_name: aggregate(baseFilter.filter(function(r) {
+                        return (!selectionState.group_name.length || selectionState.group_name.indexOf(r.group_name) > -1) &&
+                               (!selectionState.processedSlot.length || selectionState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                               (!selectionState.aovBucket.length || selectionState.aovBucket.indexOf(r.aovBucket) > -1);
+                    }), 'restaurant_name'), 
+                    
+                    group_name: aggregate(baseFilter.filter(function(r) {
+                        return (!selectionState.restaurant_name.length || selectionState.restaurant_name.indexOf(r.restaurant_name) > -1) &&
+                               (!selectionState.processedSlot.length || selectionState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                               (!selectionState.aovBucket.length || selectionState.aovBucket.indexOf(r.aovBucket) > -1);
+                    }), 'group_name'), 
+                    
+                    processedSlot: aggregate(baseFilter.filter(function(r) {
+                        return (!selectionState.restaurant_name.length || selectionState.restaurant_name.indexOf(r.restaurant_name) > -1) &&
+                               (!selectionState.group_name.length || selectionState.group_name.indexOf(r.group_name) > -1) &&
+                               (!selectionState.aovBucket.length || selectionState.aovBucket.indexOf(r.aovBucket) > -1);
+                    }), 'processedSlot') 
+                };
+
+                compareMode1 = document.getElementById('compareToggle').checked;
+                var dStartComp = document.getElementById('dateStartComp').value;
+                var dEndComp = document.getElementById('dateEndComp').value;
+                
+                if (compareMode1) {
+                    var baseFilterComp = rawData.filter(function(r) {
+                        return ( (!dStartComp || r.dateOnly >= dStartComp) && (!dEndComp || r.dateOnly <= dEndComp) ) 
+                               && (oType === 'all' || r.area === oType) 
+                               && (pType === 'all' || r.payment_type === pType)
+                               && (sType === 'all' || r.status === sType);
+                    });
+                    filteredDataComp = baseFilterComp.filter(function(r) {
+                        var nMatch = !selectionState.restaurant_name.length || selectionState.restaurant_name.indexOf(r.restaurant_name) > -1;
+                        var gMatch = !selectionState.group_name.length || selectionState.group_name.indexOf(r.group_name) > -1;
+                        var sMatch = !selectionState.processedSlot.length || selectionState.processedSlot.indexOf(r.processedSlot) > -1;
+                        var aMatch = !selectionState.aovBucket.length || selectionState.aovBucket.indexOf(r.aovBucket) > -1;
+                        return nMatch && gMatch && sMatch && aMatch;
+                    });
+                    activeBaseFilterComp = baseFilterComp;
+                    globalCompareAggregates = { 
+                        restaurant_name: aggregate(baseFilterComp.filter(function(r) {
+                            return (!selectionState.group_name.length || selectionState.group_name.indexOf(r.group_name) > -1) &&
+                                   (!selectionState.processedSlot.length || selectionState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                                   (!selectionState.aovBucket.length || selectionState.aovBucket.indexOf(r.aovBucket) > -1);
+                        }), 'restaurant_name'), 
+                        group_name: aggregate(baseFilterComp.filter(function(r) {
+                            return (!selectionState.restaurant_name.length || selectionState.restaurant_name.indexOf(r.restaurant_name) > -1) &&
+                                   (!selectionState.processedSlot.length || selectionState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                                   (!selectionState.aovBucket.length || selectionState.aovBucket.indexOf(r.aovBucket) > -1);
+                        }), 'group_name'), 
+                        processedSlot: aggregate(baseFilterComp.filter(function(r) {
+                            return (!selectionState.restaurant_name.length || selectionState.restaurant_name.indexOf(r.restaurant_name) > -1) &&
+                                   (!selectionState.group_name.length || selectionState.group_name.indexOf(r.group_name) > -1) &&
+                                   (!selectionState.aovBucket.length || selectionState.aovBucket.indexOf(r.aovBucket) > -1);
+                        }), 'processedSlot') 
+                    };
+                }
+                
+                // --- Tab 2 Item Filter Logic ---
+                var dStart2 = document.getElementById('dateStart2').value;
+                var dEnd2 = document.getElementById('dateEnd2').value;
+                var oType2 = document.getElementById('areaFilter2').value;
+                var pType2 = document.getElementById('paymentFilter2').value;
+                var sType2 = document.getElementById('statusFilter2').value;
+                var rType2 = document.getElementById('restaurantFilter2').value;
+                var aovf = document.getElementById('aovBucketFilter2').value;
+                var slotf = document.getElementById('slotFilter2').value;
+
+                var baseItemFilter = rawItemData.filter(function(r) {
+                    return ( (!dStart2 || r.dateOnly >= dStart2) && (!dEnd2 || r.dateOnly <= dEnd2) )
+                           && (oType2 === 'all' || r.area === oType2) 
+                           && (pType2 === 'all' || r.payment_type === pType2)
+                           && (sType2 === 'all' || r.status === sType2)
+                           && (rType2 === 'all' || r.restaurant_name === rType2)
+                           && (aovf === 'all' || r.aovBucket === aovf)
+                           && (slotf === 'all' || r.processedSlot === slotf);
+                });
+                
+                filteredItemData = baseItemFilter.filter(function(r) {
+                    var nMatch = !selectionItemState.restaurant_name.length || selectionItemState.restaurant_name.indexOf(r.restaurant_name) > -1;
+                    var cMatch = !selectionItemState.category_name.length || selectionItemState.category_name.indexOf(r.category_name) > -1;
+                    var iMatch = !selectionItemState.item_name.length || selectionItemState.item_name.indexOf(r.item_name) > -1;
+                    var sMatch = !selectionItemState.processedSlot.length || selectionItemState.processedSlot.indexOf(r.processedSlot) > -1;
+                    var pMatch = !selectionItemState.channel.length || selectionItemState.channel.indexOf(r.channel) > -1;
+                    var aMatch = !selectionItemState.aovBucket.length || selectionItemState.aovBucket.indexOf(r.aovBucket) > -1;
+                    return nMatch && cMatch && iMatch && sMatch && pMatch && aMatch;
+                });
+
+                activeBaseItemFilter = baseItemFilter;
+                
+                itemAggregates = {
+                    category_name: aggregateItems(baseItemFilter.filter(function(r) {
+                        return (!selectionItemState.item_name.length || selectionItemState.item_name.indexOf(r.item_name) > -1) &&
+                               (!selectionItemState.processedSlot.length || selectionItemState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                               (!selectionItemState.channel.length || selectionItemState.channel.indexOf(r.channel) > -1) &&
+                               (!selectionItemState.aovBucket.length || selectionItemState.aovBucket.indexOf(r.aovBucket) > -1);
+                    }), 'category_name'),
+                    channel: aggregateItems(baseItemFilter.filter(function(r) {
+                        return (!selectionItemState.item_name.length || selectionItemState.item_name.indexOf(r.item_name) > -1) &&
+                               (!selectionItemState.processedSlot.length || selectionItemState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                               (!selectionItemState.category_name.length || selectionItemState.category_name.indexOf(r.category_name) > -1) &&
+                               (!selectionItemState.aovBucket.length || selectionItemState.aovBucket.indexOf(r.aovBucket) > -1);
+                    }), 'channel'),
+                    item_name: aggregateItems(baseItemFilter.filter(function(r) {
+                         return (!selectionItemState.category_name.length || selectionItemState.category_name.indexOf(r.category_name) > -1) &&
+                               (!selectionItemState.processedSlot.length || selectionItemState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                               (!selectionItemState.channel.length || selectionItemState.channel.indexOf(r.channel) > -1) &&
+                               (!selectionItemState.aovBucket.length || selectionItemState.aovBucket.indexOf(r.aovBucket) > -1);
+                    }), 'item_name')
+                };
+
+                // --- Tab 2 Item Filter Logic ---
+                compareMode2 = document.getElementById('compareToggle2').checked;
+                var dStartComp2 = document.getElementById('dateStartComp2').value;
+                var dEndComp2 = document.getElementById('dateEndComp2').value;
+
+                if (compareMode2) {
+                    var baseItemFilterComp = rawItemData.filter(function(r) {
+                        return ( (!dStartComp2 || r.dateOnly >= dStartComp2) && (!dEndComp2 || r.dateOnly <= dEndComp2) )
+                               && (oType2 === 'all' || r.area === oType2) 
+                               && (pType2 === 'all' || r.payment_type === pType2)
+                               && (sType2 === 'all' || r.status === sType2)
+                               && (rType2 === 'all' || r.restaurant_name === rType2)
+                               && (aovf === 'all' || r.aovBucket === aovf)
+                               && (slotf === 'all' || r.processedSlot === slotf);
+                    });
+                    
+                    filteredItemDataComp = baseItemFilterComp.filter(function(r) {
+                        var nMatch = !selectionItemState.restaurant_name.length || selectionItemState.restaurant_name.indexOf(r.restaurant_name) > -1;
+                        var cMatch = !selectionItemState.category_name.length || selectionItemState.category_name.indexOf(r.category_name) > -1;
+                        var iMatch = !selectionItemState.item_name.length || selectionItemState.item_name.indexOf(r.item_name) > -1;
+                        var sMatch = !selectionItemState.processedSlot.length || selectionItemState.processedSlot.indexOf(r.processedSlot) > -1;
+                        var pMatch = !selectionItemState.channel.length || selectionItemState.channel.indexOf(r.channel) > -1;
+                        var aMatch = !selectionItemState.aovBucket.length || selectionItemState.aovBucket.indexOf(r.aovBucket) > -1;
+                        return nMatch && cMatch && iMatch && sMatch && pMatch && aMatch;
+                    });
+    
+                    activeBaseItemFilterComp = baseItemFilterComp;
+                    itemCompareAggregates = {
+                        category_name: aggregateItems(baseItemFilterComp.filter(function(r) {
+                            return (!selectionItemState.item_name.length || selectionItemState.item_name.indexOf(r.item_name) > -1) &&
+                                   (!selectionItemState.processedSlot.length || selectionItemState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                                   (!selectionItemState.channel.length || selectionItemState.channel.indexOf(r.channel) > -1) &&
+                                   (!selectionItemState.aovBucket.length || selectionItemState.aovBucket.indexOf(r.aovBucket) > -1);
+                        }), 'category_name'),
+                        channel: aggregateItems(baseItemFilterComp.filter(function(r) {
+                            return (!selectionItemState.item_name.length || selectionItemState.item_name.indexOf(r.item_name) > -1) &&
+                                   (!selectionItemState.processedSlot.length || selectionItemState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                                   (!selectionItemState.category_name.length || selectionItemState.category_name.indexOf(r.category_name) > -1) &&
+                                   (!selectionItemState.aovBucket.length || selectionItemState.aovBucket.indexOf(r.aovBucket) > -1);
+                        }), 'channel'),
+                        item_name: aggregateItems(baseItemFilterComp.filter(function(r) {
+                             return (!selectionItemState.category_name.length || selectionItemState.category_name.indexOf(r.category_name) > -1) &&
+                                   (!selectionItemState.processedSlot.length || selectionItemState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                                   (!selectionItemState.channel.length || selectionItemState.channel.indexOf(r.channel) > -1) &&
+                                   (!selectionItemState.aovBucket.length || selectionItemState.aovBucket.indexOf(r.aovBucket) > -1);
+                        }), 'item_name')
+                    };
+                }
+                
+                try { renderKPIs(); } catch(e) { logDebug("renderKPIs error"); }
+                try { renderTab2KPIs(); } catch(e) { logDebug("renderTab2KPIs error"); }
+                try { renderCharts(); } catch(e) { logDebug("renderCharts error"); }
+                try { renderTab2Charts(); } catch(e) { logDebug("renderTab2Charts error"); }
+                try { renderPivot(); } catch(e) { logDebug("renderPivot error"); }
+                try { renderTab3(); } catch(e) { logDebug("renderTab3 error"); }
+                try { updateFilterBadges(); } catch(e) { logDebug("updateFilterBadges error"); }
+                
+                logDebug("updateDashboard complete for " + filteredData.length + " rows");
+                setTimeout(initResizables, 100); 
+            } catch(e) { logDebug("updateDashboard fatal: " + e.message); }
+        }
+
+        function initResizables() {
+            var tables = document.querySelectorAll('table.resizable');
+            for(var i=0; i<tables.length; i++) {
+                var table = tables[i];
+                var cols = table.querySelectorAll('th');
+                for(var j=0; j<cols.length; j++) {
+                    var th = cols[j];
+                    if(th.querySelector('.resizer')) continue;
+                    var resizer = document.createElement('div');
+                    resizer.className = 'resizer';
+                    th.appendChild(resizer);
+                    _createResizer(th, resizer);
+                }
+            }
+        }
+
+        function _createResizer(th, resizer) {
+            var x = 0; var w = 0;
+            var mouseMoveHandler = function(e) {
+                var dx = e.clientX - x;
+                th.style.width = (w + dx) + 'px';
+                th.style.minWidth = (w + dx) + 'px';
+            };
+            var mouseUpHandler = function() {
+                resizer.classList.remove('resizing');
+                document.removeEventListener('mousemove', mouseMoveHandler);
+                document.removeEventListener('mouseup', mouseUpHandler);
+            };
+            resizer.addEventListener('mousedown', function(e) {
+                x = e.clientX;
+                var s = window.getComputedStyle(th);
+                w = parseInt(s.width, 10);
+                resizer.classList.add('resizing');
+                document.addEventListener('mousemove', mouseMoveHandler);
+                document.addEventListener('mouseup', mouseUpHandler);
+            });
+        }
+
+        function aggregateItems(data, key) {
+            var res = {};
+            for(var i=0; i<data.length; i++) {
+                var r = data[i]; var k = r[key] || 'N/A';
+                if(!res[k]) res[k] = { qty: 0, count: 0 }; 
+                res[k].qty += r.qty; res[k].count++; 
+            }
+            return res;
+        }
+
+        function aggregate(data, key) {
+            var res = {};
+            for(var i=0; i<data.length; i++) {
+                var r = data[i];
+                var k = r[key] || 'N/A';
+                if(!res[k]) res[k] = { total: 0, count: 0, base: 0, tax: 0, persons: 0 }; 
+                res[k].total += r.total; res[k].base += r.my_amount; res[k].tax += r.tax_charges; res[k].count++; res[k].persons += (parseInt(r.persons || r.no_of_persons) || 0); 
+            }
+            return res;
+        }
+
+        function generateDeltaHTML(valA, valB, formatType) {
+            if (valB === 0) return '';
+            var diff = valA - valB;
+            var pct = ((diff / valB) * 100).toFixed(1);
+            var colorClass = diff >= 0 ? 'text-emerald-500' : 'text-rose-500';
+            var icon = diff >= 0 ? '▲' : '▼';
+            var displayValB = valB;
+            if (formatType === 'currency') displayValB = indianFormatter.format(valB);
+            else if (formatType === 'number') displayValB = valB.toLocaleString();
+            else if (formatType === 'float') displayValB = valB.toFixed(1);
+
+            return '<div class="text-right flex flex-col items-end leading-tight">' +
+                   '<span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">' + displayValB + ' (Period B)</span>' +
+                   '<div><span class="' + colorClass + '">' + icon + ' ' + Math.abs(pct) + '%</span> <span class="text-gray-400 font-normal">vs Period B</span></div>' +
+                   '</div>';
+        }
+
+        function renderKPIs() {
+            var rev = 0; var ps = 0; var pcount = 0;
+            for(var i=0; i<filteredData.length; i++) {
+                rev += filteredData[i].total;
+                var p = parseInt(filteredData[i].persons || filteredData[i].no_of_persons) || 0;
+                ps += p;
+                if (p > 0) pcount++;
+            }
+            var count = filteredData.length; 
+            var aov = count ? rev/count : 0;
+            var avgP = pcount > 0 ? ps/pcount : 0;
+            
+            document.getElementById('kpi-revenue').textContent = indianFormatter.format(rev); 
+            document.getElementById('kpi-orders').textContent = count.toLocaleString(); 
+            document.getElementById('kpi-aov').textContent = indianFormatter.format(aov); 
+            document.getElementById('kpi-persons').textContent = avgP.toFixed(1);
+
+            if (compareMode1) {
+                var revB = 0; var psB = 0; var pcountB = 0;
+                for(var j=0; j<filteredDataComp.length; j++) {
+                    revB += filteredDataComp[j].total;
+                    var pB = parseInt(filteredDataComp[j].persons || filteredDataComp[j].no_of_persons) || 0;
+                    psB += pB;
+                    if (pB > 0) pcountB++;
+                }
+                var countB = filteredDataComp.length;
+                var aovB = countB ? revB/countB : 0;
+                var avgPB = pcountB > 0 ? psB/pcountB : 0;
+                document.getElementById('kpi-revenue-comp').innerHTML = generateDeltaHTML(rev, revB, 'currency');
+                document.getElementById('kpi-orders-comp').innerHTML = generateDeltaHTML(count, countB, 'number');
+                document.getElementById('kpi-aov-comp').innerHTML = generateDeltaHTML(aov, aovB, 'currency');
+                document.getElementById('kpi-persons-comp').innerHTML = generateDeltaHTML(avgP, avgPB, 'float');
+            } else {
+                document.getElementById('kpi-revenue-comp').innerHTML = '';
+                document.getElementById('kpi-orders-comp').innerHTML = '';
+                document.getElementById('kpi-aov-comp').innerHTML = '';
+                document.getElementById('kpi-persons-comp').innerHTML = '';
+            }
+        }
+
+        function getOrderAOVBuckets(sourceData) {
+            var b = { '0-200':0, '200-400':0, '400-600':0, '600-800':0, '800-1000':0, '1000-1200':0, '>1200':0 };
+            for(var i=0; i<sourceData.length; i++) {
+                var v = sourceData[i].total;
+                if(v < 200) b['0-200']++; else if(v < 400) b['200-400']++; else if(v < 600) b['400-600']++;
+                else if(v < 800) b['600-800']++; else if(v < 1000) b['800-1000']++; else if(v < 1200) b['1000-1200']++; else b['>1200']++;
+            }
+            return b;
+        }
+
+        function renderCharts() { 
+            draw('outletChart', 'bar', 'restaurant_name'); 
+            
+            var aovFiltered = activeBaseFilter.filter(function(r) {
+                return (!selectionState.restaurant_name.length || selectionState.restaurant_name.indexOf(r.restaurant_name) > -1) &&
+                       (!selectionState.group_name.length || selectionState.group_name.indexOf(r.group_name) > -1) &&
+                       (!selectionState.processedSlot.length || selectionState.processedSlot.indexOf(r.processedSlot) > -1);
+            });
+            var buckets = getOrderAOVBuckets(aovFiltered);
+            var bLabels = ['0-200', '200-400', '400-600', '600-800', '800-1000', '1000-1200', '>1200'];
+            var bData1 = bLabels.map(function(l) { return buckets[l]; });
+            var bgColors1 = bLabels.map(function(l) { return selectionState.aovBucket.length && selectionState.aovBucket.indexOf(l) === -1 ? CONFIG.dimColor : CONFIG.colors[1]; });
+            
+            var datasetsAOV = [{ label: 'Period A Invoices', data: bData1, backgroundColor: bgColors1 }];
+            if (compareMode1) {
+                var aovFilteredComp = activeBaseFilterComp.filter(function(r) {
+                    return (!selectionState.restaurant_name.length || selectionState.restaurant_name.indexOf(r.restaurant_name) > -1) &&
+                           (!selectionState.group_name.length || selectionState.group_name.indexOf(r.group_name) > -1) &&
+                           (!selectionState.processedSlot.length || selectionState.processedSlot.indexOf(r.processedSlot) > -1);
+                });
+                var bucketsComp = getOrderAOVBuckets(aovFilteredComp);
+                var bData2 = bLabels.map(function(l) { return bucketsComp[l]; });
+                var bgColors2 = bLabels.map(function(l) { return selectionState.aovBucket.length && selectionState.aovBucket.indexOf(l) === -1 ? '#ffedd5' : '#f97316'; });
+                datasetsAOV.push({ label: 'Period B Invoices', data: bData2, backgroundColor: bgColors2 });
+            }
+
+            if (charts['aovChart1']) charts['aovChart1'].destroy();
+            charts['aovChart1'] = new Chart(document.getElementById('aovChart1'), {
+                type: 'bar', data: { labels: bLabels, datasets: datasetsAOV },
+                options: { 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: (compareMode1), position: 'bottom' } }, // toggle legend
+                    onClick: function(e, el) { if(el.length > 0) toggleFilter('aovBucket', bLabels[el[0].index], e.native ? e.native.ctrlKey : false); }
+                }
+            });
+            
+            draw('slotChart', 'line', 'processedSlot', ["Breakfast", "Lunch", "Snacks", "Dinner"]); 
+        }
+
+        function renderTab2KPIs() {
+            var totalItems = 0;
+            var uniqueInvoices = {};
+            for(var i=0; i<filteredItemData.length; i++) {
+                var r = filteredItemData[i];
+                totalItems += r.qty;
+                if(r.invoice_no) uniqueInvoices[r.invoice_no] = true;
+            }
+            var uc = Object.keys(uniqueInvoices).length;
+            var avgI = uc ? totalItems/uc : 0;
+            
+            document.getElementById('kpi-items-sold').textContent = totalItems.toLocaleString(); 
+            document.getElementById('kpi-items-invoice').textContent = avgI.toFixed(2);
+            
+            if (compareMode2) {
+                var totalItemsB = 0; var uniqueInvoicesB = {};
+                for(var j=0; j<filteredItemDataComp.length; j++) {
+                    var rB = filteredItemDataComp[j];
+                    totalItemsB += rB.qty;
+                    if(rB.invoice_no) uniqueInvoicesB[rB.invoice_no] = true;
+                }
+                var ucB = Object.keys(uniqueInvoicesB).length;
+                var avgIB = ucB ? totalItemsB/ucB : 0;
+                document.getElementById('kpi-items-comp').innerHTML = generateDeltaHTML(totalItems, totalItemsB, 'number');
+                document.getElementById('kpi-invoice-comp').innerHTML = generateDeltaHTML(avgI, avgIB, 'float');
+            } else {
+                document.getElementById('kpi-items-comp').innerHTML = '';
+                document.getElementById('kpi-invoice-comp').innerHTML = '';
+            }
+        }
+
+        function getAOVBuckets(sourceItemData) {
+            var orderMap = {};
+            for(var i=0; i<rawData.length; i++) {
+                if(rawData[i].invoice_no) orderMap[rawData[i].invoice_no] = rawData[i].total;
+            }
+            var activeInvoices = {};
+            for(var j=0; j<sourceItemData.length; j++) {
+                var inv = sourceItemData[j].invoice_no;
+                if(inv && orderMap[inv] !== undefined) activeInvoices[inv] = orderMap[inv];
+            }
+            
+            var b = { '0-200':0, '200-400':0, '400-600':0, '600-800':0, '800-1000':0, '1000-1200':0, '>1200':0 };
+            Object.keys(activeInvoices).forEach(function(k) {
+                var v = activeInvoices[k];
+                if(v < 200) b['0-200']++; else if(v < 400) b['200-400']++; else if(v < 600) b['400-600']++;
+                else if(v < 800) b['600-800']++; else if(v < 1000) b['800-1000']++; else if(v < 1200) b['1000-1200']++; else b['>1200']++;
+            });
+            return b;
+        }
+
+        function renderTab2Charts() {
+            // Category Profile
+            drawItemDoughnut('catItemChart', 'category_name');
+            // Channel Vol
+            drawItemDoughnut('channelChart', 'channel');
+            
+            // Top/Bottom 10 Items
+            var sortedItems = Object.keys(itemAggregates.item_name).map(function(k) { return { name: k, v: itemAggregates.item_name[k].qty }; }).sort(function(a,b) { return b.v - a.v; });
+            var top10 = sortedItems.slice(0, 10);
+            var bot10 = sortedItems.slice().reverse().slice(0, 10);
+            drawItemBar('topItemChart', top10);
+            drawItemBar('bottomItemChart', bot10);
+            
+            // AOV Buckets
+            var aovFilteredItems = activeBaseItemFilter.filter(function(r) {
+                 return (!selectionItemState.restaurant_name.length || selectionItemState.restaurant_name.indexOf(r.restaurant_name) > -1) &&
+                        (!selectionItemState.category_name.length || selectionItemState.category_name.indexOf(r.category_name) > -1) &&
+                        (!selectionItemState.item_name.length || selectionItemState.item_name.indexOf(r.item_name) > -1) &&
+                        (!selectionItemState.processedSlot.length || selectionItemState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                        (!selectionItemState.channel.length || selectionItemState.channel.indexOf(r.channel) > -1);
+            });
+            var itemBuckets = getAOVBuckets(aovFilteredItems);
+            var itemBLabels = ['0-200', '200-400', '400-600', '600-800', '800-1000', '1000-1200', '>1200'];
+            var itemBData1 = itemBLabels.map(function(l) { return itemBuckets[l]; });
+            var itemBg1 = itemBLabels.map(function(l) { return selectionItemState.aovBucket.length && selectionItemState.aovBucket.indexOf(l) === -1 ? CONFIG.dimColor : CONFIG.colors[1]; });
+            var datasetsAOVItem = [{ label: 'Period A Invoices', data: itemBData1, backgroundColor: itemBg1 }];
+            
+            if (compareMode2) {
+                var aovFilteredItemsComp = activeBaseItemFilterComp.filter(function(r) {
+                     return (!selectionItemState.restaurant_name.length || selectionItemState.restaurant_name.indexOf(r.restaurant_name) > -1) &&
+                            (!selectionItemState.category_name.length || selectionItemState.category_name.indexOf(r.category_name) > -1) &&
+                            (!selectionItemState.item_name.length || selectionItemState.item_name.indexOf(r.item_name) > -1) &&
+                            (!selectionItemState.processedSlot.length || selectionItemState.processedSlot.indexOf(r.processedSlot) > -1) &&
+                            (!selectionItemState.channel.length || selectionItemState.channel.indexOf(r.channel) > -1);
+                });
+                var itemBucketsComp = getAOVBuckets(aovFilteredItemsComp);
+                var itemBData2 = itemBLabels.map(function(l) { return itemBucketsComp[l]; });
+                var itemBg2 = itemBLabels.map(function(l) { return selectionItemState.aovBucket.length && selectionItemState.aovBucket.indexOf(l) === -1 ? '#ffedd5' : '#f97316'; });
+                datasetsAOVItem.push({ label: 'Period B Invoices', data: itemBData2, backgroundColor: itemBg2 });
+            }
+
+            if (charts['bucketChart']) charts['bucketChart'].destroy();
+            charts['bucketChart'] = new Chart(document.getElementById('bucketChart'), {
+                type: 'bar', data: { labels: itemBLabels, datasets: datasetsAOVItem },
+                options: { 
+                    maintainAspectRatio: false,     
+                    plugins: { legend: { display: (compareMode2), position: 'bottom' } },
+                    onClick: function(e, el) { if(el.length > 0) toggleItemFilter('aovBucket', itemBLabels[el[0].index], e.native ? e.native.ctrlKey : false); }
+                }
+            });
+            
+            var slots = ['Breakfast', 'Lunch', 'Snacks', 'Dinner'];
+            var sData1 = slots.map(function(s) { return filteredItemData.filter(function(r) { return r.processedSlot === s; }).reduce(function(sum, r){ return sum + r.qty; }, 0); });
+            var slotDatasets = [{ label: 'Period A Items Sold', data: sData1, borderColor: CONFIG.colors[4], fill:true, tension:0.4 }];
+            if (compareMode2) {
+                var sData2 = slots.map(function(s) { return filteredItemDataComp.filter(function(r) { return r.processedSlot === s; }).reduce(function(sum, r){ return sum + r.qty; }, 0); });
+                slotDatasets.push({ label: 'Period B Items Sold', data: sData2, borderColor: '#f97316', fill:true, tension:0.4 });
+            }
+
+            if (charts['slotCatChart']) charts['slotCatChart'].destroy();
+            charts['slotCatChart'] = new Chart(document.getElementById('slotCatChart'), {
+                type: 'line', data: { labels: slots, datasets: slotDatasets },
+                options: { 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: (compareMode2), position: 'bottom' } },
+                    onClick: function(e, el) { if(el.length > 0) toggleItemFilter('processedSlot', slots[el[0].index], e.native ? e.native.ctrlKey : false); }
+                }
+            });
+        }
+
+        function mapChannelPivot(area) {
+            if (!area) return 'Others';
+            var a = area.toLowerCase();
+            if (a.indexOf('dine') > -1) return 'Dine in';
+            if (a.indexOf('parcel') > -1 || a.indexOf('takeaway') > -1 || a.indexOf('pick up') > -1) return 'Pick Up';
+            if (a.indexOf('swiggy') > -1) return 'Swiggy';
+            if (a.indexOf('zomato') > -1) return 'Zomato';
+            return 'Others';
+        }
+
+        function renderTab3() {
+            var targetDate = document.getElementById('dateBreakupFilter').value;
+            if (!targetDate) return;
+            
+            var dayData = rawData.filter(function(r) { return r.dateOnly === targetDate; });
+            var slots = ["Breakfast", "Lunch", "Snacks", "Dinner"];
+            var channels = ["Dine in", "Pick Up", "Swiggy", "Zomato", "Others"];
+            
+            function buildPivots(metricName, suffix) {
+                var restaurantMap = {};
+                var channelMap = {};
+                
+                dayData.forEach(function(r) {
+                    var res = r.restaurant_name;
+                    var slot = r.processedSlot;
+                    var chan = mapChannelPivot(r.area);
+                    
+                    if (!restaurantMap[res]) {
+                        restaurantMap[res] = { slots: {}, total: 0 };
+                        slots.forEach(function(s) { restaurantMap[res].slots[s] = 0; });
+                    }
+                    if (!channelMap[res]) {
+                        channelMap[res] = { channels: {}, total: 0 };
+                        channels.forEach(function(c) { channelMap[res].channels[c] = 0; });
+                    }
+                    
+                    var val = 0;
+                    if (metricName === 'orders') val = 1;
+                    else if (metricName === 'sales') val = r.total;
+                    else if (metricName === 'discounts') val = parseFloat(r.discount) || 0;
+                    
+                    restaurantMap[res].slots[slot] = (restaurantMap[res].slots[slot] || 0) + val;
+                    restaurantMap[res].total += val;
+                    channelMap[res].channels[chan] = (channelMap[res].channels[chan] || 0) + val;
+                    channelMap[res].total += val;
+                });
+                
+                var sortedRes = Object.keys(restaurantMap).sort();
+                var isCur = (metricName !== 'orders');
+
+                // Table 1 (Slots)
+                var h1 = '<tr><th class="p-2 text-left w-1/4">Location</th>' + slots.map(function(s){ return '<th class="p-2 text-right">'+s+'</th>'; }).join('') + '<th class="p-2 text-right">Total</th></tr>';
+                document.getElementById('breakupSlotHead' + suffix).innerHTML = h1;
+                
+                var b1 = ''; var sTots = {}; slots.forEach(function(s){ sTots[s]=0; }); var gTot = 0;
+                sortedRes.forEach(function(res){
+                    var row = restaurantMap[res];
+                    var l = '<tr><td class="p-1 border-b font-medium text-gray-600">'+res+'</td>';
+                    slots.forEach(function(s){
+                        var v = row.slots[s]; sTots[s]+=v;
+                        l += '<td class="p-1 border-b text-right">'+(isCur ? indianFormatter.format(v) : v.toLocaleString())+'</td>';
+                    });
+                    l += '<td class="p-1 border-b text-right font-bold">'+(isCur ? indianFormatter.format(row.total) : row.total.toLocaleString())+'</td></tr>';
+                    gTot += row.total; b1 += l;
+                });
+                document.getElementById('breakupSlotBody' + suffix).innerHTML = b1;
+                var f1 = '<tr><td class="p-1 font-bold">Grand Total</td>' + slots.map(function(s){ return '<td class="p-1 text-right font-bold">'+(isCur ? indianFormatter.format(sTots[s]) : sTots[s].toLocaleString())+'</td>'; }).join('') + '<td class="p-1 text-right font-bold">'+(isCur ? indianFormatter.format(gTot) : gTot.toLocaleString())+'</td></tr>';
+                document.getElementById('breakupSlotFoot' + suffix).innerHTML = f1;
+
+                // Table 2 (Channels)
+                var h2 = '<tr><th class="p-2 text-left w-1/4">Location</th>' + channels.map(function(c){ return '<th class="p-2 text-right">'+c+'</th>'; }).join('') + '<th class="p-2 text-right">Total</th></tr>';
+                document.getElementById('breakupAreaHead' + suffix).innerHTML = h2;
+                
+                var b2 = ''; var cTots = {}; channels.forEach(function(c){ cTots[c]=0; }); var gTot2 = 0;
+                sortedRes.forEach(function(res){
+                    var row = channelMap[res];
+                    var l = '<tr><td class="p-1 border-b font-medium text-gray-600">'+res+'</td>';
+                    channels.forEach(function(c){
+                        var v = row.channels[c]; cTots[c]+=v;
+                        l += '<td class="p-1 border-b text-right">'+(isCur ? indianFormatter.format(v) : v.toLocaleString())+'</td>';
+                    });
+                    l += '<td class="p-1 border-b text-right font-bold">'+(isCur ? indianFormatter.format(row.total) : row.total.toLocaleString())+'</td></tr>';
+                    gTot2 += row.total; b2 += l;
+                });
+                document.getElementById('breakupAreaBody' + suffix).innerHTML = b2;
+                var f2 = '<tr><td class="p-1 font-bold">Grand Total</td>' + channels.map(function(c){ return '<td class="p-1 text-right font-bold">'+(isCur ? indianFormatter.format(cTots[c]) : cTots[c].toLocaleString())+'</td>'; }).join('') + '<td class="p-1 text-right font-bold">'+(isCur ? indianFormatter.format(gTot2) : gTot2.toLocaleString())+'</td></tr>';
+                document.getElementById('breakupAreaFoot' + suffix).innerHTML = f2;
+
+                // Charts
+                var cId1 = 'breakupSlotChart' + suffix;
+                if(charts[cId1]) charts[cId1].destroy();
+                charts[cId1] = new Chart(document.getElementById(cId1), {
+                    type: 'line', data: { labels: sortedRes, datasets: slots.map(function(s, idx){ return { label: s, data: sortedRes.map(function(r){ return restaurantMap[r].slots[s]; }), borderColor: CONFIG.colors[idx%8], tension: 0, fill: false, pointRadius: 3 }; }) },
+                    options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }, scales: { y: { ticks: { font: { size: 9 } } }, x: { ticks: { font: { size: 9 } } } } }
+                });
+
+                var cId2 = 'breakupAreaChart' + suffix;
+                if(charts[cId2]) charts[cId2].destroy();
+                charts[cId2] = new Chart(document.getElementById(cId2), {
+                    type: 'line', data: { labels: sortedRes, datasets: channels.map(function(c, idx){ return { label: c, data: sortedRes.map(function(r){ return channelMap[r].channels[c]; }), borderColor: CONFIG.colors[(idx+4)%8], tension: 0, fill: false, pointRadius: 3 }; }) },
+                    options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }, scales: { y: { ticks: { font: { size: 9 } } }, x: { ticks: { font: { size: 9 } } } } }
+                });
+            }
+
+            buildPivots('orders', ''); // Suffix empty for orders
+            buildPivots('sales', 'Sales');
+            buildPivots('discounts', 'Disc');
+            
+            renderWoWSection(targetDate);
+        }
+
+        function renderWoWSection(targetDate) {
+            try {
+                var d = new Date(targetDate);
+                if(isNaN(d.getTime())) return;
+                
+                var dLast = new Date(d);
+                dLast.setDate(dLast.getDate() - 7);
+                var targetDateLast = dLast.toISOString().split('T')[0];
+                
+                var daysMap = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+                var dayName = daysMap[d.getDay()];
+                
+                document.getElementById('wowHeadCurrent').textContent = dayName + " " + targetDate;
+                document.getElementById('wowHeadLast').textContent = dayName + " " + targetDateLast;
+
+                var dataA = rawData.filter(function(r) { return r.dateOnly === targetDate; });
+                var dataB = rawData.filter(function(r) { return r.dateOnly === targetDateLast; });
+                
+                function aggByRes(data) {
+                    var map = {};
+                    data.forEach(function(r) {
+                        var res = r.restaurant_name;
+                        if(!map[res]) map[res] = { orders: 0, sales: 0 };
+                        map[res].orders++;
+                        map[res].sales += r.total;
+                    });
+                    return map;
+                }
+
+                var aggA = aggByRes(dataA);
+                var aggB = aggByRes(dataB);
+                
+                var allRes = [];
+                Object.keys(aggA).concat(Object.keys(aggB)).forEach(function(k) { if(allRes.indexOf(k) === -1) allRes.push(k); });
+                allRes.sort();
+
+                var bodyA = ''; var bodyB = ''; var bodyG = '';
+                var tOA = 0; var tSA = 0; var tOB = 0; var tSB = 0;
+
+                allRes.forEach(function(res) {
+                    var vA = aggA[res] || { orders: 0, sales: 0 };
+                    var vB = aggB[res] || { orders: 0, sales: 0 };
+                    
+                    tOA += vA.orders; tSA += vA.sales;
+                    tOB += vB.orders; tSB += vB.sales;
+
+                    bodyA += '<tr><td class="p-2 font-medium">'+res+'</td><td class="p-2 text-right">'+vA.orders.toLocaleString()+'</td><td class="p-2 text-right">'+indianFormatter.format(vA.sales)+'</td></tr>';
+                    bodyB += '<tr><td class="p-2 font-medium">'+res+'</td><td class="p-2 text-right">'+vB.orders.toLocaleString()+'</td><td class="p-2 text-right">'+indianFormatter.format(vB.sales)+'</td></tr>';
+                    
+                    var oG = vB.orders ? ((vA.orders - vB.orders)/vB.orders * 100).toFixed(1) : (vA.orders ? '100.0' : '0.0');
+                    var sG = vB.sales ? ((vA.sales - vB.sales)/vB.sales * 100).toFixed(1) : (vA.sales ? '100.0' : '0.0');
+                    
+                    var oColor = oG >= 0 ? 'text-emerald-500' : 'text-rose-500';
+                    var sColor = sG >= 0 ? 'text-emerald-500' : 'text-rose-500';
+                    
+                    bodyG += '<tr><td class="p-2 font-medium">'+res+'</td><td class="p-2 text-right '+oColor+'">'+oG+'%</td><td class="p-2 text-right '+sColor+'">'+sG+'%</td></tr>';
+                });
+
+                // Grand Totals
+                var gOA = tOA ? ((tOA - tOB)/tOB * 100).toFixed(1) : (tOA ? '100.0' : '0.0');
+                var gSA = tSA ? ((tSA - tSB)/tSB * 100).toFixed(1) : (tSA ? '100.0' : '0.0');
+                
+                bodyA += '<tr class="bg-gray-50 font-bold border-t"><td>Grand Total</td><td class="text-right">'+tOA.toLocaleString()+'</td><td class="text-right">'+indianFormatter.format(tSA)+'</td></tr>';
+                bodyB += '<tr class="bg-gray-50 font-bold border-t"><td>Grand Total</td><td class="text-right">'+tOB.toLocaleString()+'</td><td class="text-right">'+indianFormatter.format(tSB)+'</td></tr>';
+                bodyG += '<tr class="bg-gray-50 font-bold border-t"><td>Grand Total</td><td class="text-right '+(gOA>=0?'text-emerald-500':'text-rose-500')+'">'+gOA+'%</td><td class="text-right '+(gSA>=0?'text-emerald-500':'text-rose-500')+'">'+gSA+'%</td></tr>';
+
+                document.getElementById('wowBodyCurrent').innerHTML = bodyA;
+                document.getElementById('wowBodyLast').innerHTML = bodyB;
+                document.getElementById('wowBodyGrowth').innerHTML = bodyG;
+
+                // Charts
+                function drawMixedChart(id, labels, orders, sales) {
+                    if(charts[id]) charts[id].destroy();
+                    charts[id] = new Chart(document.getElementById(id), {
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                { type: 'bar', label: 'Total Orders', data: orders, backgroundColor: 'rgba(59, 130, 246, 0.7)', yAxisID: 'y' },
+                                { type: 'line', label: 'Net Sales', data: sales, borderColor: '#f59e0b', borderWidth: 2, tension: 0.3, pointRadius: 4, yAxisID: 'y1' }
+                            ]
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } },
+                            scales: {
+                                y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Orders', font: { size: 10 } } },
+                                y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Sales (₹)', font: { size: 10 } }, ticks: { callback: function(v){ return '₹' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v); } } }
+                            }
+                        }
+                    });
+                }
+
+                drawMixedChart('wowChartCurrent', allRes, allRes.map(function(k){ return aggA[k]?aggA[k].orders:0; }), allRes.map(function(k){ return aggA[k]?aggA[k].sales:0; }));
+                drawMixedChart('wowChartLast', allRes, allRes.map(function(k){ return aggB[k]?aggB[k].orders:0; }), allRes.map(function(k){ return aggB[k]?aggB[k].sales:0; }));
+
+            } catch(e) { logDebug("renderWoWSection error: " + e.message); }
+        }
+    
+        function drawItemDoughnut(id, key) {
+            var rawLabels = Object.keys(itemAggregates[key]);
+            var sortedFull = rawLabels.map(function(l) { 
+                return { label: l, v1: itemAggregates[key][l].qty, v2: (compareMode2 && itemCompareAggregates[key] && itemCompareAggregates[key][l]) ? itemCompareAggregates[key][l].qty : 0 }; 
+            }).sort(function(a,b) { return b.v1 - a.v1; });
+
+            // Grouping into Top 10 + Others if more than 12 categories
+            var labels = []; var data1 = []; var data2 = [];
+            if (sortedFull.length > 12) {
+                var top = sortedFull.slice(0, 10);
+                var others = sortedFull.slice(10);
+                labels = top.map(function(x){ return x.label; }).concat(['Others']);
+                data1 = top.map(function(x){ return x.v1; }).concat([others.reduce(function(s,x){ return s+x.v1; }, 0)]);
+                data2 = top.map(function(x){ return x.v2; }).concat([others.reduce(function(s,x){ return s+x.v2; }, 0)]);
+            } else {
+                labels = sortedFull.map(function(x){ return x.label; });
+                data1 = sortedFull.map(function(x){ return x.v1; });
+                data2 = sortedFull.map(function(x){ return x.v2; });
+            }
+
+            if (charts[id]) charts[id].destroy();
+            var bgColors1 = labels.map(function(l, idx) { 
+                return (selectionItemState[key] && selectionItemState[key].length && selectionItemState[key].indexOf(l) === -1 && l !== 'Others') ? CONFIG.dimColor : CONFIG.colors[idx % 8];
+            });
+            
+            var datasets = [{ label: 'Period A Volume (Qty)', data: data1, backgroundColor: bgColors1 }];
+            if (compareMode2) {
+                 var bgPhase2 = bgColors1.map(function(c) { return c === CONFIG.dimColor ? c : c + '80'; });
+                 datasets.push({ label: 'Period B Volume (Qty)', data: data2, backgroundColor: bgPhase2 });
+            }
+
+            charts[id] = new Chart(document.getElementById(id), { 
+                type: 'doughnut', data: { labels: labels, datasets: datasets }, 
+                options: { 
+                    maintainAspectRatio: false, 
+                    layout: { padding: 10 }, 
+                    onClick: function(e, el) { 
+                        if(el.length > 0) {
+                            var clickedLabel = labels[el[0].index];
+                            if (clickedLabel !== 'Others') toggleItemFilter(key, clickedLabel, e.native ? e.native.ctrlKey : false); 
+                        }
+                    }, 
+                    plugins: { 
+                        legend: { 
+                            display: true, 
+                            position: 'right', 
+                            align: 'center',
+                            labels: { boxWidth: 8, font: { size: 9 }, usePointStyle: true, pointStyle: 'circle' } 
+                        },
+                        tooltip: { callbacks: { label: function(c) { return '  ' + c.raw.toLocaleString() + ' (' + c.label + ')'; } } },
+                        datalabels: {
+                            display: function(ctx) {
+                                if (compareMode2) return false;
+                                var sum = ctx.chart._metasets[ctx.datasetIndex].total;
+                                return sum > 0 && (ctx.dataset.data[ctx.dataIndex] / sum) >= 0.05;
+                            },
+                            formatter: function(value, ctx) {
+                                var sum = ctx.chart._metasets[ctx.datasetIndex].total;
+                                return sum === 0 ? '' : (value * 100 / sum).toFixed(0) + '%';
+                            },
+                            color: '#64748b', font: { weight: 'bold', size: 9 }, align: 'center', anchor: 'center'
+                        }
+                    } 
+                }
+            });
+        }
+        
+        function drawItemBar(id, arrObj) {
+            var labels = arrObj.map(function(x) { return x.name; });
+            var data1 = arrObj.map(function(x) { return x.v; });
+            if (charts[id]) charts[id].destroy();
+            var bgColors1 = [];
+            for (var i=0; i<labels.length; i++) {
+                if (selectionItemState['item_name'] && selectionItemState['item_name'].length && selectionItemState['item_name'].indexOf(labels[i]) === -1) {
+                    bgColors1.push(CONFIG.dimColor);
+                } else {
+                    bgColors1.push(CONFIG.colors[i % 8]);
+                }
+            }
+            var datasets = [{ label: 'Period A Volume (Qty)', data: data1, backgroundColor: bgColors1 }];
+            if (compareMode2 && itemCompareAggregates['item_name']) {
+                var data2 = labels.map(function(l) { return itemCompareAggregates['item_name'][l] ? itemCompareAggregates['item_name'][l].qty : 0; });
+                var bgColors2 = labels.map(function(l) { return selectionItemState['item_name'].length && selectionItemState['item_name'].indexOf(l) === -1 ? '#ffedd5' : '#f97316'; });
+                datasets.push({ label: 'Period B Volume (Qty)', data: data2, backgroundColor: bgColors2 });
+            }
+
+            charts[id] = new Chart(document.getElementById(id), { 
+                type: 'bar', data: { labels: labels, datasets: datasets }, 
+                options: { indexAxis: 'y', maintainAspectRatio: false, onClick: function(e, el) { if(el.length > 0) toggleItemFilter('item_name', labels[el[0].index], e.native ? e.native.ctrlKey : false); }, plugins: { legend: { display: false } } }
+            });
+        }
+
+        function draw(id, type, key, order) {
+            var labels = order || Object.keys(globalAggregates[key]).sort(); 
+            var data1 = labels.map(function(l) { return globalAggregates[key][l] ? globalAggregates[key][l].total : 0; });
+            var totalSum = data1.reduce(function(a, b) { return a + b; }, 0);
+            if (charts[id]) charts[id].destroy();
+            var isDoughnut = type === 'doughnut';
+            var isLine = type === 'line';
+
+            if(typeof Chart === 'undefined') { logDebug("Chart is undefined, cannot draw"); return; }
+            var bgColors1 = [];
+            for (var i=0; i<labels.length; i++) {
+                if (selectionState[key].length && selectionState[key].indexOf(labels[i]) === -1) {
+                    bgColors1.push(CONFIG.dimColor);
+                } else {
+                    bgColors1.push(CONFIG.colors[i % 8]);
+                }
+            }
+            
+            var datasets = [{ 
+                label: 'Period A Total Revenue', data: data1, backgroundColor: bgColors1, 
+                borderWidth: isLine ? 3 : 1, borderColor: isLine ? CONFIG.colors[0] : '#fff',
+                fill: isLine ? { target: 'origin', above: 'rgba(59, 130, 246, 0.1)' } : false,
+                tension: isLine ? 0.4 : 0, pointBackgroundColor: CONFIG.colors[0], pointRadius: isLine ? 4 : 0
+            }];
+            
+            if (compareMode1 && globalCompareAggregates[key]) {
+                var data2 = labels.map(function(l) { return globalCompareAggregates[key][l] ? globalCompareAggregates[key][l].total : 0; });
+                var bgColors2 = labels.map(function(l) { return selectionState[key].length && selectionState[key].indexOf(l) === -1 ? '#ffedd5' : '#f97316'; });
+                datasets.push({ 
+                    label: 'Period B Total Revenue', data: data2, backgroundColor: bgColors2, 
+                    borderWidth: isLine ? 3 : 1, borderColor: isLine ? '#f97316' : '#fff',
+                    fill: isLine ? { target: 'origin', above: 'rgba(249, 115, 22, 0.1)' } : false,
+                    tension: isLine ? 0.4 : 0, pointBackgroundColor: '#f97316', pointRadius: isLine ? 4 : 0
+                });
+            }
+
+            charts[id] = new Chart(document.getElementById(id), { 
+                type: type, data: { labels: labels, datasets: datasets }, 
+                options: { 
+                    maintainAspectRatio: false, 
+                    layout: { padding: isDoughnut ? 30 : 0 },
+                    onClick: function(e, el) { if(el.length > 0) toggleFilter(key, labels[el[0].index], e.native ? e.native.ctrlKey : false); }, 
+                    plugins: { 
+                        legend: { display: !isDoughnut && !isLine, position: 'bottom' },
+                        datalabels: {
+                            display: function(ctx) { 
+                                if (isDoughnut && compareMode1) return false;
+                                return isDoughnut && totalSum > 0 && (ctx.dataset.data[ctx.dataIndex] / totalSum) > 0.01; 
+                            },
+                            anchor: 'end', align: 'end', offset: 15, color: '#64748b', font: { weight: 'bold', size: 10 },
+                            formatter: function(val, ctx) {
+                                if (totalSum === 0) return null;
+                                return ((val/totalSum)*100).toFixed(1) + '%';
+                            }
+                        }
+                    },
+                    scales: (type !== 'doughnut') ? { 
+                        y: { beginAtZero: true, ticks: { callback: function(v) { return indianFormatter.format(v); } }, grid: { color: '#f3f4f6' } },
+                        x: { grid: { display: false } }
+                    } : {}
+                }
+            });
+        }
+
+        function toggleFilter(key, val, multi) { 
+            if(!multi) {
+                selectionState[key] = (selectionState[key].length === 1 && selectionState[key][0] === val) ? [] : [val]; 
+            } else {
+                var idx = selectionState[key].indexOf(val);
+                if (idx > -1) {
+                    selectionState[key].splice(idx, 1);
+                } else {
+                    selectionState[key].push(val);
+                }
+            }
+            updateDashboard(); 
+        }
+
+        function toggleItemFilter(key, val, multi) { 
+            if(!selectionItemState[key]) selectionItemState[key] = [];
+            if(!multi) {
+                selectionItemState[key] = (selectionItemState[key].length === 1 && selectionItemState[key][0] === val) ? [] : [val]; 
+            } else {
+                var idx = selectionItemState[key].indexOf(val);
+                if (idx > -1) {
+                    selectionItemState[key].splice(idx, 1);
+                } else {
+                    selectionItemState[key].push(val);
+                }
+            }
+            updateDashboard(); 
+        }
+
+        function renderPivot() {
+            var dim = selectionState.restaurant_name.length ? 'group_name' : 'restaurant_name'; 
+            var agg = aggregate(filteredData, dim);
+            var aggComp = compareMode1 ? aggregate(filteredDataComp, dim) : {};
+            
+            var head = document.getElementById('pivotHead');
+            if (compareMode1) {
+                head.innerHTML = '<tr><th class="p-1.5 text-left min-w-[120px]">Dimension</th><th class="text-right p-1.5">Ord(A)</th><th class="text-right p-1.5 text-orange-600 border-l bg-orange-50/30">Ord(B)</th><th class="text-right p-1.5">Base(A)</th><th class="text-right p-1.5 text-orange-600 border-l bg-orange-50/30">Base(B)</th><th class="text-right p-1.5 text-gray-400">Tax(A)</th><th class="text-right p-1.5 text-orange-400 border-l bg-orange-50/30">Tax(B)</th><th class="text-right p-1.5 font-bold">Total(A)</th><th class="text-right p-1.5 font-bold text-orange-600 border-l bg-orange-50/30">Total(B)</th><th class="text-right p-1.5 text-blue-600">AOV(A)</th><th class="text-right p-1.5 text-orange-600 border-l bg-orange-50/30">AOV(B)</th></tr>';
+            } else {
+                head.innerHTML = '<tr><th class="p-2 text-left">Dimension</th><th class="text-right p-2">Orders</th><th class="text-right p-2">Base Amt</th><th class="text-right p-2 text-gray-400">Tax</th><th class="text-right p-2 font-bold font-bold">Total Sales</th><th class="text-right p-2 text-blue-600">AOV</th></tr>';
+            }
+
+            var body = document.getElementById('pivotBody'); 
+            body.innerHTML = '';
+            
+            var allKeys = {};
+            Object.keys(agg).forEach(function(k) { allKeys[k] = true; });
+            if (compareMode1) Object.keys(aggComp).forEach(function(k) { allKeys[k] = true; });
+            
+            var sortedKeys = Object.keys(allKeys).sort(function(a,b) { 
+                var valA = agg[a] ? agg[a].total : 0;
+                var valB = agg[b] ? agg[b].total : 0;
+                var v2A = aggComp[a] ? aggComp[a].total : 0;
+                var v2B = aggComp[b] ? aggComp[b].total : 0;
+                return (valB + v2B) - (valA + v2A); 
+            });
+
+            
+            for(var i=0; i<sortedKeys.length; i++) {
+                var k = sortedKeys[i];
+                var v = agg[k] || { count: 0, base: 0, tax: 0, total: 0 };
+                var vB = aggComp[k] || { count: 0, base: 0, tax: 0, total: 0 };
+                var tr = document.createElement('tr'); 
+                var isSelected = selectionState[dim].indexOf(k) > -1;
+                tr.className = 'pivot-row text-xs' + (isSelected ? ' selected' : ''); 
+                
+                tr.setAttribute('data-key', k);
+                tr.setAttribute('data-dim', dim);
+                tr.onclick = function(e) { 
+                    var tk = this.getAttribute('data-key');
+                    var td = this.getAttribute('data-dim');
+                    toggleFilter(td, tk, e.ctrlKey); 
+                };
+                
+                if (compareMode1) {
+                    var aovA = v.count ? v.total/v.count : 0;
+                    var aovB = vB.count ? vB.total/vB.count : 0;
+                    tr.innerHTML = '<td class="p-1.5 font-medium truncate max-w-[120px]" title="' + k + '">' + k + '</td><td class="text-right p-1.5">' + v.count + '</td><td class="text-right p-1.5 text-orange-700 bg-orange-50/50 border-l border-orange-100">' + vB.count + '</td><td class="text-right p-1.5">' + indianFormatter.format(v.base) + '</td><td class="text-right p-1.5 text-orange-700 bg-orange-50/50 border-l border-orange-100">' + indianFormatter.format(vB.base) + '</td><td class="text-right p-1.5 text-gray-400">' + indianFormatter.format(v.tax) + '</td><td class="text-right p-1.5 text-orange-400 bg-orange-50/50 border-l border-orange-100">' + indianFormatter.format(vB.tax) + '</td><td class="text-right p-1.5 font-bold text-gray-700">' + indianFormatter.format(v.total) + '</td><td class="text-right p-1.5 font-bold text-orange-700 bg-orange-50/50 border-l border-orange-100">' + indianFormatter.format(vB.total) + '</td><td class="text-right p-1.5 text-blue-700 font-bold">' + indianFormatter.format(aovA) + '</td><td class="text-right p-1.5 text-orange-700 font-bold bg-orange-50/50 border-l border-orange-100">' + indianFormatter.format(aovB) + '</td>';
+                } else {
+                    tr.innerHTML = '<td class="p-2 font-medium truncate" title="' + k + '">' + k + '</td><td class="text-right p-2">' + v.count + '</td><td class="text-right p-2">' + indianFormatter.format(v.base) + '</td><td class="text-right p-2 text-gray-400">' + indianFormatter.format(v.tax) + '</td><td class="text-right p-2 font-bold">' + indianFormatter.format(v.total) + '</td><td class="text-right p-2 text-blue-600 font-bold">' + (v.count ? indianFormatter.format(v.total/v.count) : indianFormatter.format(0)) + '</td>';
+                }
+                body.appendChild(tr);
+            }
+        }
+
+        function updateFilterBadges() { 
+            var c = document.getElementById('active-filters'); 
+            c.innerHTML = ''; 
+            Object.keys(selectionState).forEach(function(k) {
+                selectionState[k].forEach(function(v) {
+                    var span = document.createElement('span');
+                    span.className = "bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2";
+                    span.innerHTML = v + ' <button type="button">×</button>';
+                    span.querySelector('button').onclick = function() { toggleFilter(k, v, true); };
+                    c.appendChild(span);
+                });
+            });
+            Object.keys(selectionItemState).forEach(function(k) {
+                if(!selectionItemState[key] || !selectionItemState[k].forEach) return;
+                selectionItemState[k].forEach(function(v) {
+                    var span = document.createElement('span');
+                    span.className = "bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-2";
+                    span.innerHTML = 'Item: ' + v + ' <button type="button">×</button>';
+                    span.querySelector('button').onclick = function() { toggleItemFilter(k, v, true); };
+                    c.appendChild(span);
+                });
+            });
+        }
+        
+        function resetFilters() { 
+            selectionState = { restaurant_name: [], group_name: [], processedSlot: [], aovBucket: [] }; 
+            selectionItemState = { category_name: [], item_name: [], processedSlot: [], restaurant_name: [], channel: [], aovBucket: [] };
+            
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
+            document.getElementById('areaFilter').value = 'all';
+            document.getElementById('paymentFilter').value = 'all';
+            document.getElementById('statusFilter').value = 'all';
+            
+            document.getElementById('dateStart2').value = '';
+            document.getElementById('dateEnd2').value = '';
+            document.getElementById('areaFilter2').value = 'all';
+            document.getElementById('paymentFilter2').value = 'all';
+            document.getElementById('statusFilter2').value = 'all';
+            document.getElementById('restaurantFilter2').value = 'all';
+            document.getElementById('aovBucketFilter2').value = 'all';
+            document.getElementById('slotFilter2').value = 'all';
+            
+            updateDashboard(); 
+        }
+
+        function initApp() {
+            try {
+                logDebug("Binding Event Listeners");
+
+                document.getElementById('devToggleBtn').addEventListener('click', function() {
+                    var banner = document.getElementById('debug-banner');
+                    if (banner.classList.contains('hidden')) {
+                        banner.classList.remove('hidden');
+                    } else {
+                        banner.classList.add('hidden');
+                    }
+                });
+                document.getElementById('closeBannerBtn').addEventListener('click', function() {
+                    document.getElementById('debug-banner').classList.add('hidden');
+                });
+                
+                document.getElementById('tab1-btn').addEventListener('click', function() { switchTab(1); });
+                document.getElementById('tab2-btn').addEventListener('click', function() { switchTab(2); });
+                document.getElementById('tab3-btn').addEventListener('click', function() { switchTab(3); });
+
+                document.getElementById('dateBreakupFilter').addEventListener('change', updateDashboard);
+
+                document.getElementById('nav-setup-db').addEventListener('click', toggleDbModal);
+                document.getElementById('empty-setup-db').addEventListener('click', toggleDbModal);
+                document.getElementById('btn-modal-cancel').addEventListener('click', toggleDbModal);
+                document.getElementById('saveDbBtn').addEventListener('click', saveDbSettings);
+                document.getElementById('syncBtn').addEventListener('click', syncSupabase);
+                document.getElementById('aiToggleBtn').addEventListener('click', function() {
+                    var panels = document.querySelectorAll('.ai-section-panel');
+                    var isHidden = panels[0].classList.contains('hidden');
+                    for(var i=0; i<panels.length; i++) {
+                        if(isHidden) panels[i].classList.remove('hidden'); else panels[i].classList.add('hidden');
+                    }
+                    if (isHidden) {
+                        this.classList.replace('bg-gray-100', 'bg-indigo-50');
+                        this.classList.replace('text-gray-700', 'text-indigo-700');
+                        this.classList.replace('border-gray-200', 'border-indigo-200');
+                    } else {
+                        this.classList.replace('bg-indigo-50', 'bg-gray-100');
+                        this.classList.replace('text-indigo-700', 'text-gray-700');
+                        this.classList.replace('border-indigo-200', 'border-gray-200');
+                    }
+                });
+                
+                document.getElementById('ai-insight-btn').addEventListener('click', generateInsights);
+                document.getElementById('btn-growth').addEventListener('click', askRecommendations);
+                document.getElementById('btn-persona').addEventListener('click', generatePersona);
+                
+                document.getElementById('ai-insight-btn2').addEventListener('click', generateInsights2);
+                document.getElementById('btn-growth2').addEventListener('click', askRecommendations2);
+                document.getElementById('btn-persona2').addEventListener('click', generatePersona2);
+                document.getElementById('btn-close-ai').addEventListener('click', closeAiModal);
+                document.getElementById('btn-got-it').addEventListener('click', closeAiModal);
+                document.getElementById('btn-reset-filters').addEventListener('click', resetFilters);
+
+                document.getElementById('dateStart').addEventListener('change', updateDashboard);
+                document.getElementById('dateEnd').addEventListener('change', updateDashboard);
+                document.getElementById('dateStartComp').addEventListener('change', updateDashboard);
+                document.getElementById('dateEndComp').addEventListener('change', updateDashboard);
+                document.getElementById('compareToggle').addEventListener('change', function(e) {
+                    var flexRow = document.getElementById('compareRow');
+                    if(e.target.checked) flexRow.classList.remove('hidden'); else flexRow.classList.add('hidden');
+                    updateDashboard();
+                });
+                
+                document.getElementById('areaFilter').addEventListener('change', updateDashboard);
+                document.getElementById('sbUrl').addEventListener('change', discoverTables);
+                document.getElementById('sbKey').addEventListener('change', discoverTables);
+                document.getElementById('paymentFilter').addEventListener('change', updateDashboard);
+                document.getElementById('statusFilter').addEventListener('change', updateDashboard);
+                
+                document.getElementById('dateStart2').addEventListener('change', updateDashboard);
+                document.getElementById('dateEnd2').addEventListener('change', updateDashboard);
+                document.getElementById('dateStartComp2').addEventListener('change', updateDashboard);
+                document.getElementById('dateEndComp2').addEventListener('change', updateDashboard);
+                document.getElementById('compareToggle2').addEventListener('change', function(e) {
+                    var flexRow = document.getElementById('compareRow2');
+                    if(e.target.checked) flexRow.classList.remove('hidden'); else flexRow.classList.add('hidden');
+                    updateDashboard();
+                });
+
+                document.getElementById('areaFilter2').addEventListener('change', updateDashboard);
+                document.getElementById('paymentFilter2').addEventListener('change', updateDashboard);
+                document.getElementById('statusFilter2').addEventListener('change', updateDashboard);
+                document.getElementById('restaurantFilter2').addEventListener('change', updateDashboard);
+                document.getElementById('aovBucketFilter2').addEventListener('change', updateDashboard);
+                document.getElementById('slotFilter2').addEventListener('change', updateDashboard);
+                document.getElementById('btn-reset-filters2').addEventListener('click', resetFilters);
+                
+                // Trigger auto-sync if we have tables
+                var saved = localStorage.getItem('supabase_config');
+                if(saved) {
+                    var c = JSON.parse(saved);
+                    if(c.table) syncSupabase();
+                } else {
+                    // Force default tables for the corporate account
+                    var defaultConf = { 
+                        url: "https://wroyimrtmtqwtphprvay.supabase.co", 
+                        key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indyb3lpbXJ0bXRxd3RwaHBydmF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MDg3ODUsImV4cCI6MjA4NjM4NDc4NX0.xOEsHGG06EiKweQV9ssWErs5nmFiHX9k1eaCNXoCbaA",
+                        table: "order_summary",
+                        table2: "order_item_summary"
+                    };
+                    localStorage.setItem('supabase_config', JSON.stringify(defaultConf));
+                    syncSupabase();
+                }
+
+            } catch(e) { logDebug("Init error: " + e.message); }
+        }
+
+        async function checkAuth() {
+            logDebug("Checking Authentication...");
+            if (!supabaseClient) {
+                var url = document.getElementById('sbUrl').value;
+                var key = document.getElementById('sbKey').value;
+                if(url && key) initSupabase(url, key);
+            }
+            if (!supabaseClient) return showLoginScreen("Supabase client not initialized.");
+
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            if (error) { showLoginScreen(error.message); return; }
+
+            if (session && session.user) {
+                const email = session.user.email || "";
+                if (email.endsWith('@wishvishfoods.com')) {
+                    hideLoginScreen();
+                    initApp();
+                } else {
+                    await supabaseClient.auth.signOut();
+                    showLoginScreen("Access restricted to @wishvishfoods.com accounts.");
+                }
+            } else {
+                showLoginScreen();
+            }
+        }
+
+        async function handleLogin() {
+            if (!supabaseClient) return alert("Configuration error. Check settings.");
+            const { error } = await supabaseClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.href,
+                    queryParams: { hd: 'wishvishfoods.com', prompt: 'select_account' }
+                }
+            });
+            if (error) alert("Login Error: " + error.message);
+        }
+
+        async function handleLogout() {
+            if(supabaseClient) await supabaseClient.auth.signOut();
+            localStorage.removeItem('supabase_config');
+            window.location.reload();
+        }
+
+        function showLoginScreen(msg) {
+            document.getElementById('login-overlay').classList.remove('hidden');
+            document.getElementById('main-app-container').classList.add('hidden');
+            if(msg) {
+                var err = document.getElementById('authError');
+                err.textContent = msg; err.classList.remove('hidden');
+            }
+        }
+
+        function hideLoginScreen() {
+            document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('main-app-container').classList.remove('hidden');
+        }
+
+        window.onload = function() {
+            logDebug("WishVish Boot...");
+            var saved = localStorage.getItem('supabase_config');
+            var url = document.getElementById('sbUrl').value;
+            var key = document.getElementById('sbKey').value;
+            if(saved) {
+                try {
+                    var c = JSON.parse(saved);
+                    url = c.url || url; key = c.key || key;
+                } catch(e) {}
+            }
+            if(initSupabase(url, key)) {
+                checkAuth();
+            } else {
+                showLoginScreen("Configuration error. Check settings.");
+            }
+        };
+
+        document.getElementById('googleAuthBtn').onclick = handleLogin;
+        document.getElementById('logoutBtn').onclick = handleLogout;
+    </script>
+</div> <!-- main-app-container end -->
+
+</body>
+</html>
