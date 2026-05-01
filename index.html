@@ -2259,13 +2259,16 @@
             if (!supabaseClient) return showLoginScreen("Supabase client not initialized.");
             const { data: { session }, error } = await supabaseClient.auth.getSession();
             if (error) { showLoginScreen(error.message); return; }
+            handleSession(session);
+        }
+        function handleSession(session) {
             if (session && session.user) {
                 const email = session.user.email || "";
                 if (email.endsWith('@wishvishfoods.com')) {
                     hideLoginScreen();
                     initApp();
                 } else {
-                    await supabaseClient.auth.signOut();
+                    supabaseClient.auth.signOut();
                     showLoginScreen("Access restricted to @wishvishfoods.com accounts.");
                 }
             } else {
@@ -2285,7 +2288,6 @@
         }
         async function handleLogout() {
             if(supabaseClient) await supabaseClient.auth.signOut();
-            localStorage.removeItem('supabase_config');
             window.location.reload();
         }
         function showLoginScreen(msg) {
@@ -2312,6 +2314,12 @@
                 } catch(e) {}
             }
             if(initSupabase(url, key)) {
+                // Add state listener for smooth redirects
+                supabaseClient.auth.onAuthStateChange(function(event, session) {
+                    logDebug("Auth Event: " + event);
+                    if (event === 'SIGNED_IN') handleSession(session);
+                    if (event === 'SIGNED_OUT') showLoginScreen();
+                });
                 checkAuth();
             } else {
                 showLoginScreen("Configuration error. Check settings.");
