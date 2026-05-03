@@ -88,12 +88,15 @@
     <!-- Main App Container (Hidden until Auth) -->
     <div id="main-app-container" class="hidden">
     <!-- DEBUG BANNER -->
-    <div id="debug-banner" class="bg-red-600 text-white p-3 text-sm font-bold z-[100] relative w-full shadow-lg h-32 overflow-y-auto hidden">
-        <div class="flex justify-between items-center">
-            <p>✅ V5 Ultimate ES5 Build Uploaded!</p>
-            <button id="closeBannerBtn" class="text-white hover:text-red-200">×</button>
+    <div id="debug-banner" class="fixed bottom-0 left-0 right-0 bg-slate-900 text-white p-4 text-xs font-mono z-[9999] shadow-2xl h-48 overflow-y-auto hidden border-t border-slate-700">
+        <div class="flex justify-between items-center mb-2 border-b border-slate-700 pb-2">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                <span class="font-bold uppercase tracking-wider text-[10px]">System Dev Logs</span>
+            </div>
+            <button id="closeBannerBtn" class="bg-slate-800 hover:bg-slate-700 p-1 px-2 rounded text-lg">&times;</button>
         </div>
-        <p class="font-normal text-xs mt-1" id="debug-log">System initializing...</p>
+        <div id="debug-log" class="space-y-1 opacity-90">System initializing...</div>
     </div>
     <nav class="bg-white border-b px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-50">
         <div>
@@ -2150,17 +2153,6 @@
         function initApp() {
             try {
                 logDebug("Binding Event Listeners");
-                document.getElementById('devToggleBtn').addEventListener('click', function() {
-                    var banner = document.getElementById('debug-banner');
-                    if (banner.classList.contains('hidden')) {
-                        banner.classList.remove('hidden');
-                    } else {
-                        banner.classList.add('hidden');
-                    }
-                });
-                document.getElementById('closeBannerBtn').addEventListener('click', function() {
-                    document.getElementById('debug-banner').classList.add('hidden');
-                });
                 
                 document.getElementById('tab1-btn').addEventListener('click', function() { switchTab(1); });
                 document.getElementById('tab2-btn').addEventListener('click', function() { switchTab(2); });
@@ -2171,22 +2163,7 @@
                 document.getElementById('btn-modal-cancel').addEventListener('click', toggleDbModal);
                 document.getElementById('saveDbBtn').addEventListener('click', saveDbSettings);
                 document.getElementById('syncBtn').addEventListener('click', syncSupabase);
-                document.getElementById('aiToggleBtn').addEventListener('click', function() {
-                    var panels = document.querySelectorAll('.ai-section-panel');
-                    var isHidden = panels[0].classList.contains('hidden');
-                    for(var i=0; i<panels.length; i++) {
-                        if(isHidden) panels[i].classList.remove('hidden'); else panels[i].classList.add('hidden');
-                    }
-                    if (isHidden) {
-                        this.classList.replace('bg-gray-100', 'bg-indigo-50');
-                        this.classList.replace('text-gray-700', 'text-indigo-700');
-                        this.classList.replace('border-gray-200', 'border-indigo-200');
-                    } else {
-                        this.classList.replace('bg-indigo-50', 'bg-gray-100');
-                        this.classList.replace('text-indigo-700', 'text-gray-700');
-                        this.classList.replace('border-indigo-200', 'border-gray-200');
-                    }
-                });
+                document.getElementById('aiToggleBtn').addEventListener('click', toggleAiPanels);
                 
                 document.getElementById('ai-insight-btn').addEventListener('click', generateInsights);
                 document.getElementById('btn-growth').addEventListener('click', askRecommendations);
@@ -2218,7 +2195,30 @@
                 document.getElementById('dateEnd2').addEventListener('change', updateDashboard);
                 document.getElementById('dateStartComp2').addEventListener('change', updateDashboard);
                 document.getElementById('dateEndComp2').addEventListener('change', updateDashboard);
-                document.getElementById('compareToggle2').addEventListener('change', function(e) {
+        function toggleAiPanels() {
+            var btn = document.getElementById('aiToggleBtn');
+            var panels = document.querySelectorAll('.ai-section-panel');
+            if(!panels.length) return;
+            var isHidden = panels[0].classList.contains('hidden');
+            for(var i=0; i<panels.length; i++) {
+                if(isHidden) panels[i].classList.remove('hidden'); else panels[i].classList.add('hidden');
+            }
+            if (isHidden) {
+                btn.classList.add('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
+                btn.classList.remove('bg-gray-100', 'text-gray-700', 'border-gray-200');
+            } else {
+                btn.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
+                btn.classList.add('bg-gray-100', 'text-gray-700', 'border-gray-200');
+            }
+        }
+        function toggleDevLogs() {
+            var banner = document.getElementById('debug-banner');
+            if (banner.classList.contains('hidden')) {
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
                     var flexRow = document.getElementById('compareRow2');
                     if(e.target.checked) flexRow.classList.remove('hidden'); else flexRow.classList.add('hidden');
                     updateDashboard();
@@ -2320,13 +2320,19 @@
                     if (event === 'SIGNED_IN') handleSession(session);
                     if (event === 'SIGNED_OUT') showLoginScreen();
                 });
+                
+                // Global Navbar Bindings
+                document.getElementById('devToggleBtn').onclick = toggleDevLogs;
+                document.getElementById('aiToggleBtn').onclick = toggleAiPanels;
+                document.getElementById('closeBannerBtn').onclick = function() { document.getElementById('debug-banner').classList.add('hidden'); };
+                document.getElementById('googleAuthBtn').onclick = handleLogin;
+                document.getElementById('logoutBtn').onclick = handleLogout;
+                
                 checkAuth();
             } else {
                 showLoginScreen("Configuration error. Check settings.");
             }
         };
-        document.getElementById('googleAuthBtn').onclick = handleLogin;
-        document.getElementById('logoutBtn').onclick = handleLogout;
     </script>
 </div> <!-- main-app-container end -->
 </body>
