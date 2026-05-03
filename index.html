@@ -2304,6 +2304,13 @@
         }
         window.onload = function() {
             logDebug("WishVish Boot...");
+            
+            // Critical Listeners must be bound immediately (Regardless of Auth Status)
+            document.getElementById('googleAuthBtn').onclick = handleLogin;
+            document.getElementById('logoutBtn').onclick = handleLogout;
+            document.getElementById('devToggleBtn').onclick = toggleDevLogs;
+            document.getElementById('aiToggleBtn').onclick = toggleAiPanels;
+            document.getElementById('closeBannerBtn').onclick = function() { document.getElementById('debug-banner').classList.add('hidden'); };
             var saved = localStorage.getItem('supabase_config');
             var url = document.getElementById('sbUrl').value;
             var key = document.getElementById('sbKey').value;
@@ -2313,6 +2320,7 @@
                     url = c.url || url; key = c.key || key;
                 } catch(e) {}
             }
+            
             if(initSupabase(url, key)) {
                 // Add state listener for smooth redirects
                 supabaseClient.auth.onAuthStateChange(function(event, session) {
@@ -2320,17 +2328,9 @@
                     if (event === 'SIGNED_IN') handleSession(session);
                     if (event === 'SIGNED_OUT') showLoginScreen();
                 });
-                
-                // Global Navbar Bindings
-                document.getElementById('devToggleBtn').onclick = toggleDevLogs;
-                document.getElementById('aiToggleBtn').onclick = toggleAiPanels;
-                document.getElementById('closeBannerBtn').onclick = function() { document.getElementById('debug-banner').classList.add('hidden'); };
-                document.getElementById('googleAuthBtn').onclick = handleLogin;
-                document.getElementById('logoutBtn').onclick = handleLogout;
-                
                 checkAuth();
             } else {
-                showLoginScreen("Configuration error. Check settings.");
+                showLoginScreen(); // Default to login screen if no config
             }
         };
     </script>
