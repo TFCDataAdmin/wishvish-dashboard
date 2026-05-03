@@ -478,6 +478,36 @@
         </div> <!-- end tab2 -->
         
         <div id="tab3-content" class="hidden">
+            <!-- AI Intelligence Bar -->
+            <div id="ai-insights-section3" class="ai-section-panel hidden grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6 transition-all duration-300">
+                <div class="card border-l-4 border-l-indigo-500 bg-gradient-to-br from-white to-indigo-50/30">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                            <span class="p-1 bg-indigo-100 rounded text-indigo-600">📊</span> AI Smart Insights
+                        </h3>
+                        <button id="ai-insight-btn3" class="text-[10px] bg-indigo-600 text-white px-3 py-1 rounded-full font-bold hover:bg-indigo-700 transition-all shadow-sm">GENERATE</button>
+                    </div>
+                    <div id="ai-insight-text3" class="text-xs text-gray-600 leading-relaxed italic">Click generate for trend and pattern analysis...</div>
+                </div>
+                <div class="card border-l-4 border-l-emerald-500 bg-gradient-to-br from-white to-emerald-50/30">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                            <span class="p-1 bg-emerald-100 rounded text-emerald-600">🚀</span> Growth Strategies
+                        </h3>
+                        <button id="btn-growth3" class="text-[10px] bg-emerald-600 text-white px-3 py-1 rounded-full font-bold hover:bg-emerald-700 transition-all shadow-sm">ANALYZE</button>
+                    </div>
+                    <div id="ai-growth-text3" class="text-xs text-gray-600 leading-relaxed italic">Identify areas for scale and optimization...</div>
+                </div>
+                <div class="card border-l-4 border-l-amber-500 bg-gradient-to-br from-white to-amber-50/30">
+                    <div class="flex justify-between items-start mb-4">
+                        <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                            <span class="p-1 bg-amber-100 rounded text-amber-600">👥</span> Diner Persona
+                        </h3>
+                        <button id="btn-persona3" class="text-[10px] bg-amber-600 text-white px-3 py-1 rounded-full font-bold hover:bg-amber-700 transition-all shadow-sm">MAPPING</button>
+                    </div>
+                    <div id="ai-persona-text3" class="text-xs text-gray-600 leading-relaxed italic">Understand your customer behavior...</div>
+                </div>
+            </div>
             <!-- Filter Top Bar -->
             <div class="card mb-6">
                 <div class="flex flex-col md:flex-row items-end gap-6 justify-between">
@@ -873,6 +903,53 @@
         function generatePersona2() {
             showAiModal("Identifying Product Affinities...", "Purchasing Persona ✨");
             var prompt = "Analyze this SKU item data: " + JSON.stringify(getSummaryForAITab2()) + ". \nCreate a consumer persona describing the type of buyer driving these specific item volumes and AOV buckets.";
+            callGemini(prompt).then(function(res) { updateAiModal(res); }).catch(function(e) { updateAiModal("Error: " + e.message); });
+        }
+        function getSummaryForAITab3() {
+            var targetDate = document.getElementById('dateBreakupFilter').value;
+            var dayData = rawData.filter(function(r) { return r.dateOnly === targetDate; });
+            var totalSales = dayData.reduce(function(s,r){return s+r.total;}, 0);
+            var totalOrders = dayData.length;
+            var slotRev = aggregate(dayData, 'processedSlot');
+            var channelRev = {};
+            dayData.forEach(function(r){ 
+                var c = mapChannelPivot(r.area); 
+                if(!channelRev[c]) channelRev[c] = 0; 
+                channelRev[c] += r.total; 
+            });
+            return {
+                date: targetDate,
+                totalSales: totalSales,
+                totalOrders: totalOrders,
+                slots: slotRev,
+                channels: channelRev
+            };
+        }
+        function generateInsights3() {
+            logDebug("Generate Insights 3 clicked");
+            var btn = document.getElementById('ai-insight-btn3');
+            var textEl = document.getElementById('ai-insight-text3');
+            if(!btn || !textEl) return;
+            btn.disabled = true; btn.innerHTML = "Analyzing... ✨"; textEl.classList.add('ai-pulse');
+            var summary = getSummaryForAITab3();
+            var prompt = "Analyze this daily breakup of restaurant orders, sales, and discounts: " + JSON.stringify(summary) + ". \nIdentify the most significant daily trend or outlier. Keep it to 2 sentences.";
+            callGemini(prompt).then(function(insight) {
+                textEl.textContent = insight; textEl.classList.remove('italic', 'ai-pulse');
+                btn.disabled = false; btn.innerHTML = "Generate ✨";
+            }).catch(function(e) {
+                textEl.textContent = "Unable to connect: " + e.message; btn.disabled = false; btn.innerHTML = "Generate ✨"; textEl.classList.remove('ai-pulse');
+            });
+        }
+        function askRecommendations3() {
+            showAiModal("Daily Optimization...", "Operational Strategies ✨");
+            var summary = getSummaryForAITab3();
+            var prompt = "Based on this daily performance breakup: " + JSON.stringify(summary) + ", \nsuggest 3 operational strategies to improve slot performance or channel efficiency for this specific day. Use bullet points.";
+            callGemini(prompt).then(function(res) { updateAiModal(res); }).catch(function(e) { updateAiModal("Error: " + e.message); });
+        }
+        function generatePersona3() {
+            showAiModal("Analyzing Daily Audience...", "Daily Diner Persona ✨");
+            var summary = getSummaryForAITab3();
+            var prompt = "Analyze this daily breakup: " + JSON.stringify(summary) + ". \nDescribe the predominant customer persona observed for this specific date based on slot and channel distribution.";
             callGemini(prompt).then(function(res) { updateAiModal(res); }).catch(function(e) { updateAiModal("Error: " + e.message); });
         }
         function showAiModal(initialText, title) {
@@ -2163,7 +2240,6 @@
                 document.getElementById('btn-modal-cancel').addEventListener('click', toggleDbModal);
                 document.getElementById('saveDbBtn').addEventListener('click', saveDbSettings);
                 document.getElementById('syncBtn').addEventListener('click', syncSupabase);
-                document.getElementById('aiToggleBtn').addEventListener('click', toggleAiPanels);
                 
                 document.getElementById('ai-insight-btn').addEventListener('click', generateInsights);
                 document.getElementById('btn-growth').addEventListener('click', askRecommendations);
@@ -2172,6 +2248,9 @@
                 document.getElementById('ai-insight-btn2').addEventListener('click', generateInsights2);
                 document.getElementById('btn-growth2').addEventListener('click', askRecommendations2);
                 document.getElementById('btn-persona2').addEventListener('click', generatePersona2);
+                document.getElementById('ai-insight-btn3').addEventListener('click', generateInsights3);
+                document.getElementById('btn-growth3').addEventListener('click', askRecommendations3);
+                document.getElementById('btn-persona3').addEventListener('click', generatePersona3);
                 document.getElementById('btn-close-ai').addEventListener('click', closeAiModal);
                 document.getElementById('btn-got-it').addEventListener('click', closeAiModal);
                 document.getElementById('btn-reset-filters').addEventListener('click', resetFilters);
