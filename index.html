@@ -2195,30 +2195,7 @@
                 document.getElementById('dateEnd2').addEventListener('change', updateDashboard);
                 document.getElementById('dateStartComp2').addEventListener('change', updateDashboard);
                 document.getElementById('dateEndComp2').addEventListener('change', updateDashboard);
-        function toggleAiPanels() {
-            var btn = document.getElementById('aiToggleBtn');
-            var panels = document.querySelectorAll('.ai-section-panel');
-            if(!panels.length) return;
-            var isHidden = panels[0].classList.contains('hidden');
-            for(var i=0; i<panels.length; i++) {
-                if(isHidden) panels[i].classList.remove('hidden'); else panels[i].classList.add('hidden');
-            }
-            if (isHidden) {
-                btn.classList.add('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
-                btn.classList.remove('bg-gray-100', 'text-gray-700', 'border-gray-200');
-            } else {
-                btn.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
-                btn.classList.add('bg-gray-100', 'text-gray-700', 'border-gray-200');
-            }
-        }
-        function toggleDevLogs() {
-            var banner = document.getElementById('debug-banner');
-            if (banner.classList.contains('hidden')) {
-                banner.classList.remove('hidden');
-            } else {
-                banner.classList.add('hidden');
-            }
-        }
+                document.getElementById('compareToggle2').addEventListener('change', function(e) {
                     var flexRow = document.getElementById('compareRow2');
                     if(e.target.checked) flexRow.classList.remove('hidden'); else flexRow.classList.add('hidden');
                     updateDashboard();
@@ -2301,6 +2278,30 @@
         function hideLoginScreen() {
             document.getElementById('login-overlay').classList.add('hidden');
             document.getElementById('main-app-container').classList.remove('hidden');
+        }
+        function toggleAiPanels() {
+            var btn = document.getElementById('aiToggleBtn');
+            var panels = document.querySelectorAll('.ai-section-panel');
+            if(!panels.length) return;
+            var isHidden = panels[0].classList.contains('hidden');
+            for(var i=0; i<panels.length; i++) {
+                if(isHidden) panels[i].classList.remove('hidden'); else panels[i].classList.add('hidden');
+            }
+            if (isHidden) {
+                btn.classList.add('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
+                btn.classList.remove('bg-gray-100', 'text-gray-700', 'border-gray-200');
+            } else {
+                btn.classList.remove('bg-indigo-50', 'text-indigo-700', 'border-indigo-200');
+                btn.classList.add('bg-gray-100', 'text-gray-700', 'border-gray-200');
+            }
+        }
+        function toggleDevLogs() {
+            var banner = document.getElementById('debug-banner');
+            if (banner.classList.contains('hidden')) {
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
         }
         window.onload = function() {
             logDebug("WishVish Boot...");
